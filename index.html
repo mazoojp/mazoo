@@ -321,7 +321,7 @@ function enter(m) {
 }
 let lastSig = '', beatSent = false;
 const beat = () => { if (me && !me.spec && S) B.set(base() + 'seen/' + me.pid, Date.now()); };   // nhịp tim: báo mình còn online
-setInterval(beat, 10000);
+setInterval(beat, 3000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) beat(); });   // quay lại tab: báo online ngay
 function leaveLocal() { if (unwatch) unwatch(); unwatch = null; S = null; me = null; store().removeItem('masoi_me'); }
 async function addBot() {

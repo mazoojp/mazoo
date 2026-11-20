@@ -43,7 +43,7 @@ const aliveIds = room => Object.keys(room.players || {}).filter(id => room.playe
 /* ---------- Kế hoạch bước tiếp theo của một phòng ----------
    Trả về { u } với u là các khóa cập nhật tương đối so với rooms/<mã>/, hoặc null nếu chưa cần làm gì.
    Mọi giá trị là tuyệt đối (không tăng dần), nên chạy lặp hai lần vẫn ra cùng kết quả. */
-export const LOBBY_IDLE_MS = 75000;   // phòng chờ: 75 giây không có nhịp tim thì coi là đã thoát (tab nền trên điện thoại có thể chậm nhịp)
+export const LOBBY_IDLE_MS = 10000;   // phòng chờ: 10 giây không có nhịp tim thì coi là đã thoát (máy gửi nhịp mỗi 3 giây; bị xóa nhầm thì tự vào lại)
 export function planStep(room, now) {
   if (!room || !room.players) return null;
 
