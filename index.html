@@ -300,13 +300,13 @@ async function joinSpec(code, name, why) {   // người xem: không nằm trong
 function setErr(m) { homeErr = m; render(); }
 function enter(m) {
   me = m; store().setItem('masoi_me', JSON.stringify(me)); store().setItem('masoi_name', me.name);
-  homeErr = ''; S = null; showRole = false; lastSig = ''; beatSent = false;
+  homeErr = ''; S = null; showRole = false; lastSig = ''; beatSent = false; leavingNow = false;
   if (unwatch) unwatch();
   unwatch = B.watch('rooms/' + me.code, v => {
     S = v;
     if (!S) { leaveLocal(); render(); return; }
     if (!beatSent) { beatSent = true; beat(); }
-    if (!me.spec && S.phase === 'lobby' && S.players && !S.players[me.pid] && me.name) {   // bị dọn nhầm (tab nền lâu): tự vào lại phòng chờ
+    if (!leavingNow && !me.spec && S.phase === 'lobby' && S.players && !S.players[me.pid] && me.name) {   // bị dọn nhầm (tab nền lâu): tự vào lại phòng chờ
       B.update({ ['rooms/' + me.code + '/players/' + me.pid]: { name: me.name, alive: true, t: Date.now() }, ['rooms/' + me.code + '/seen/' + me.pid]: Date.now() });
     }
     const sig = JSON.stringify(v, (k, x) => k === 'seen' ? undefined : x);   // nhịp tim của người khác không cần vẽ lại cả trang
@@ -332,7 +332,9 @@ async function addBot() {
   const name = '🤖 ' + (BOT_NAMES.find(n => !used.includes('🤖 ' + n)) || 'Bot' + rid().slice(0, 3));
   await B.set(base() + 'players/bot_' + rid(), { name, alive: true, t: Date.now(), bot: true, ready: true });
 }
+let leavingNow = false;   // đang bấm Rời phòng: đừng tự vào lại phòng chờ
 async function leave() {
+  leavingNow = true;
   if (me && me.spec) { await B.set('rooms/' + me.code + '/spectators/' + me.pid, null); leaveLocal(); render(); return; }
   if (S && S.phase === 'lobby') {   // ở phòng chờ: xóa tên khỏi danh sách, chủ phòng rời thì nhường người thật kế tiếp
     const code = me.code, rest = Object.entries(S.players || {}).filter(([id, p]) => id !== me.pid && !p.bot).sort((a, b) => a[1].t - b[1].t);
