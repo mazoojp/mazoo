@@ -569,10 +569,11 @@ function homeHTML() {
 /* ---------- Danh sách người chơi dạng thẻ ---------- */
 function playersGrid(withRole, forLobby) {
   const p = S.players || {}, roles = S.roles || {}, host = S.host === me.pid;
+  const iAmDead = !forLobby && !me.spec && !!p[me.pid] && !p[me.pid].alive;   // người đã chết thấy vai của tất cả; ai chết thì vai được công khai
   return `<div class="pgrid">${Object.entries(p).sort((a, b) => a[1].t - b[1].t).map(([id, v]) => {
     const tags = (id === S.host ? '<span class="chip" style="height:22px;font-size:11px">chủ phòng</span> ' : '') + (v.bot ? '<span class="chip mute" style="height:22px;font-size:11px">người máy</span>' : '');
     const meta = forLobby ? (v.ready ? '<span class="chip green" style="height:22px;font-size:11px">✅ sẵn sàng</span>' : '<span class="meta">⏳ chưa sẵn sàng</span>')
-      : (withRole && roles[id] ? `<span class="meta t-${roles[id]}">${ROLE_NAME[roles[id]]}</span>` : v.alive ? '<span class="meta">còn sống</span>' : '<span class="meta">đã chết</span>');
+      : ((withRole || !v.alive || iAmDead) && roles[id] ? `<span class="meta t-${roles[id]}">${ROLE_NAME[roles[id]]}${v.alive ? '' : ' · đã chết'}</span>` : v.alive ? '<span class="meta">còn sống</span>' : '<span class="meta">đã chết</span>');
     const x = forLobby && v.bot && host ? `<button class="x ghost" data-act="rmBot" data-pid="${id}" style="min-height:28px;padding:2px 10px;font-size:12px">Xóa</button>` : '';
     return `<div class="ptile ${v.alive ? '' : 'dead'}">${avatar(v.name)}<div style="min-width:0"><span class="nm">${esc(v.name)}${id === me.pid ? ' (bạn)' : ''}</span>${tags} ${meta}</div>${x}</div>`;
   }).join('')}</div>`;
