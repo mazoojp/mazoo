@@ -132,12 +132,12 @@
 
   /* chat */
   .chat{display:flex;flex-direction:column;height:480px;position:sticky;top:72px}
-  .tabs{display:flex;gap:6px;margin-bottom:10px}
+  .tabs{display:flex;gap:6px;margin:8px 0;align-items:center;flex-wrap:wrap}
   .tabs button{min-height:30px;height:30px;padding:0 12px;border-radius:8px;font-size:13px;background:#f3f4f6;color:var(--mute)}
-  .tabs button.sel{background:var(--pri-soft);color:var(--pri-text)}
+  .tabs button.sel{background:var(--pri-soft);color:var(--pri-text)} .tabs button.sel[data-ch=wolf]{background:#FDECEC;color:#DC2626} .tabs button.sel[data-ch=dead]{background:#EEF0F3;color:#6B7280}
   #chatlist{flex:1;min-height:0;overflow-y:auto;background:#f9f9fb;border-radius:12px;padding:10px;margin-bottom:10px}
   .msg{margin:5px 0;overflow-wrap:anywhere}
-  .msg b{color:var(--pri)} .msg.wolfmsg b{color:var(--red)} .msg.deadmsg b{color:var(--faint)}
+  .msg .chn{font-weight:700;font-size:12px;padding:1px 7px;border-radius:999px;margin-right:2px} .chn.day{background:#E8F1FD;color:#1371E2} .chn.wolf{background:#FDECEC;color:#DC2626} .chn.dead{background:#EEF0F3;color:#6B7280} .msg b{color:var(--pri)} .msg.wolfmsg b{color:var(--red)} .msg.deadmsg b{color:var(--faint)}
   .chatrow{display:flex;gap:8px} .chatrow input{height:42px}
   .chatrow button{min-width:64px}
 
@@ -731,13 +731,20 @@ function chatRule(ch) {   // trả về '' nếu được viết, ngược lại
   if (ch === 'dead') return alive && ph !== 'end' ? 'Chỉ người đã chết dùng kênh này.' : '';
   return 'Kênh không hợp lệ.';
 }
+const CH_NAME = { day: 'Chung', wolf: 'Sói', dead: 'Người chết' };
+function chatSees(ch) {   // kênh nào mình được đọc
+  if (ch === 'day' || me.spec || S.phase === 'end') return true;
+  if (ch === 'wolf') return (S.roles || {})[me.pid] === 'wolf';
+  if (ch === 'dead') { const p = (S.players || {})[me.pid]; return !!p && !p.alive; }
+  return false;
+}
 function chatHTML() {
-  const tabs = chatTabs(); if (!tabs.some(t => t[0] === chatTab)) chatTab = 'day';
-  const msgs = Object.entries(S.chat || {}).filter(([, m]) => m.c === chatTab).sort((a, b) => a[0] < b[0] ? -1 : 1).slice(-80);
+  const tabs = chatTabs().filter(t => !me.spec); if (!tabs.some(t => t[0] === chatTab)) chatTab = 'day';
+  const msgs = Object.entries(S.chat || {}).filter(([, m]) => chatSees(m.c)).sort((a, b) => a[0] < b[0] ? -1 : 1).slice(-80);
   const why = chatRule(chatTab);
   return `<div class="card chat"><div class="sec">💬 Chat</div>
-  ${tabs.length > 1 ? `<div class="tabs">${tabs.map(t => `<button class="${chatTab === t[0] ? 'sel' : ''}" data-act="chatTab" data-ch="${t[0]}">${t[1]}</button>`).join('')}</div>` : ''}
-  <div id="chatlist">${msgs.length ? msgs.map(([, m]) => `<div class="msg ${m.c}msg"><b>${esc(m.name)}</b>: ${esc(m.text)}</div>`).join('') : '<div class="note">Chưa có tin nhắn.</div>'}</div>
+  <div id="chatlist">${msgs.length ? msgs.map(([, m]) => `<div class="msg ${m.c}msg"><span class="chn ${m.c}">${CH_NAME[m.c] || 'Chung'}:</span> <b>${esc(m.name)}:</b> ${esc(m.text)}</div>`).join('') : '<div class="note">Chưa có tin nhắn.</div>'}</div>
+  ${tabs.length > 1 ? `<div class="tabs"><span class="note" style="align-self:center">Gửi tới:</span>${tabs.map(t => `<button class="${chatTab === t[0] ? 'sel' : ''}" data-act="chatTab" data-ch="${t[0]}">${t[1]}</button>`).join('')}</div>` : ''}
   ${why ? `<div class="note" style="margin-bottom:8px">${esc(why)}</div>` : ''}
   <div class="chatrow"><input data-bind="chat" maxlength="200" placeholder="${why ? 'Không thể gửi lúc này' : 'Nhập tin nhắn…'}" value="${esc(chatDraft)}" ${why ? 'disabled' : ''} autocomplete="off">
   <button class="primary" data-act="send" ${why ? 'disabled' : ''}>Gửi</button></div></div>`;
