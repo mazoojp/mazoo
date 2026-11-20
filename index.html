@@ -334,17 +334,21 @@ async function addBot() {
 }
 let leavingNow = false;   // đang bấm Rời phòng: đừng tự vào lại phòng chờ
 async function leave() {
+  if (!me) { render(); return; }
   leavingNow = true;
-  if (me && me.spec) { await B.set('rooms/' + me.code + '/spectators/' + me.pid, null); leaveLocal(); render(); return; }
-  if (S && S.phase === 'lobby') {   // ở phòng chờ: xóa tên khỏi danh sách, chủ phòng rời thì nhường người thật kế tiếp
-    const code = me.code, rest = Object.entries(S.players || {}).filter(([id, p]) => id !== me.pid && !p.bot).sort((a, b) => a[1].t - b[1].t);
-    // Lưu ý: Firebase không cho một lần update chứa cả đường dẫn cha (rooms/<mã>) lẫn con (rooms/<mã>/players/…), nên tách hai trường hợp
-    const u = rest.length ? { ['rooms/' + code + '/players/' + me.pid]: null, ['rooms/' + code + '/seen/' + me.pid]: null } : { ['rooms/' + code]: null };
-    if (rest.length && S.host === me.pid) u['rooms/' + code + '/host'] = rest[0][0];
-    try { await B.update(u); } catch (e) { /* mạng lỗi: vẫn cho người chơi thoát ra màn hình chính */ }
-  }
-  if (S && S.phase !== 'lobby' && !me.spec) await B.set(base() + 'seen/' + me.pid, 0);   // thoát giữa ván: coi là offline ngay để vào lại được liền
+  const code = me.code, pid = me.pid, spec = me.spec, room = S;
+  // Thoát khỏi màn hình ngay, rồi mới ghi lên server (dù mạng chậm/lỗi người chơi vẫn ra được)
   leaveLocal(); render();
+  try {
+    if (spec) await B.set('rooms/' + code + '/spectators/' + pid, null);
+    else if (room && room.phase === 'lobby') {   // phòng chờ: xóa tên khỏi danh sách, chủ phòng rời thì nhường người thật kế tiếp
+      const rest = Object.entries(room.players || {}).filter(([id, p]) => id !== pid && !p.bot).sort((a, b) => (a[1].t || 0) - (b[1].t || 0));
+      // Firebase không cho một lần update chứa cả đường dẫn cha (rooms/<mã>) lẫn con (rooms/<mã>/players/…), nên tách hai trường hợp
+      const u = rest.length ? { ['rooms/' + code + '/players/' + pid]: null, ['rooms/' + code + '/seen/' + pid]: null } : { ['rooms/' + code]: null };
+      if (rest.length && room.host === pid) u['rooms/' + code + '/host'] = rest[0][0];
+      await B.update(u);
+    } else if (room) await B.set('rooms/' + code + '/seen/' + pid, 0);   // thoát giữa ván: coi là offline ngay để vào lại được liền
+  } catch (e) { console.warn('Rời phòng: không ghi được lên server', e); }
 }
 
 /* ============ Lệnh gửi cho bot quản trò ============ */
@@ -936,10 +940,14 @@ const caroBeat = () => { if (cme && !cme.spec && C) B.set(cbase() + 'seen/' + cm
 setInterval(caroBeat, 10000);
 function caroLeaveLocal() { if (cUnwatch) cUnwatch(); cUnwatch = null; C = null; cme = null; store().removeItem('caro_me'); }
 async function caroLeave() {
-  if (cme.spec) await B.set(cbase() + 'spectators/' + cme.pid, null);
-  else if (C && C.phase === 'wait') { try { await B.set('caro/' + cme.code, null); } catch (e) {} }   // chưa có đối thủ: xóa phòng
-  else await B.set(cbase() + 'seen/' + cme.pid, 0);                                            // đang chơi: giữ chỗ, coi như offline
-  caroLeaveLocal(); render();
+  if (!cme) { render(); return; }
+  const code = cme.code, pid = cme.pid, spec = cme.spec, room = C;
+  caroLeaveLocal(); render();   // ra khỏi màn hình ngay, ghi server sau
+  try {
+    if (spec) await B.set('caro/' + code + '/spectators/' + pid, null);
+    else if (room && room.phase === 'wait') await B.set('caro/' + code, null);   // chưa có đối thủ: xóa phòng
+    else await B.set('caro/' + code + '/seen/' + pid, 0);                          // đang chơi: giữ chỗ, coi như offline
+  } catch (e) { console.warn('Rời phòng caro: không ghi được lên server', e); }
 }
 function caroOpp() {   // đối thủ (nếu mình là người chơi) và có đang offline không
   if (!C || !cme || cme.spec || !C.players) return null;
