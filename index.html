@@ -349,9 +349,17 @@ const ready = () => B.set(base() + 'ready/' + me.pid, true);
 // Bot được coi là đang chạy nếu nhịp tim của nó (meta/botBeat) mới hơn 20 giây.
 const botAlive = () => beatLoaded && Date.now() - botBeat < 20000;
 const hostShouldRun = () => B.mode === 'local' || (beatLoaded && !botAlive());
+// Người chạy luật: chủ phòng. Nếu máy chủ phòng ngừng (đóng tab, khóa máy, tab nền...) thì người thật online có tên vào phòng sớm nhất chạy thay,
+// để ván không đứng. Các bước luật đều idempotent nên hai máy cùng chạy cũng không sai.
+function runnerId() {
+  if (!S || !S.players) return null;
+  if (isOnline(S, S.host) || (S.host === (me && me.pid))) return S.host;
+  const cand = Object.entries(S.players).filter(([id, p]) => !p.bot && isOnline(S, id)).sort((a, b) => (a[1].t || 0) - (b[1].t || 0));
+  return cand.length ? cand[0][0] : S.host;
+}
 let hostBusy = false;
 async function tickHost() {
-  if (!me || !S || S.host !== me.pid || hostBusy || !hostShouldRun()) return;
+  if (!me || me.spec || !S || runnerId() !== me.pid || hostBusy || !hostShouldRun()) return;
   hostBusy = true; try { await stepRoom(B, me.code, S, Date.now()); } finally { hostBusy = false; }
 }
 setInterval(() => { tickHost(); updateClock(); }, 1000);
