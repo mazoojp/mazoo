@@ -319,6 +319,8 @@ function enter(m) {
 let lastSig = '', beatSent = false;
 const beat = () => { if (me && !me.spec && S) B.set(base() + 'seen/' + me.pid, Date.now()); };   // nhịp tim: báo mình còn online
 setInterval(beat, 10000);
+// Đóng tab/thoát trang khi đang ở phòng chờ: cố gắng xóa tên mình ngay (nếu không kịp, luật phòng chờ sẽ xóa sau ~75 giây)
+addEventListener('pagehide', () => { if (me && !me.spec && S && S.phase === 'lobby' && Object.values(S.players || {}).some(p => !p.bot && p !== S.players[me.pid])) B.update({ ['rooms/' + me.code + '/players/' + me.pid]: null, ['rooms/' + me.code + '/seen/' + me.pid]: null }); });
 function leaveLocal() { if (unwatch) unwatch(); unwatch = null; S = null; me = null; store().removeItem('masoi_me'); }
 async function addBot() {
   if (!S || S.phase !== 'lobby' || S.host !== me.pid) return;

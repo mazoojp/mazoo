@@ -43,6 +43,7 @@ const aliveIds = room => Object.keys(room.players || {}).filter(id => room.playe
 /* ---------- Kế hoạch bước tiếp theo của một phòng ----------
    Trả về { u } với u là các khóa cập nhật tương đối so với rooms/<mã>/, hoặc null nếu chưa cần làm gì.
    Mọi giá trị là tuyệt đối (không tăng dần), nên chạy lặp hai lần vẫn ra cùng kết quả. */
+export const LOBBY_IDLE_MS = 75000;   // phòng chờ: 75 giây không có nhịp tim thì coi là đã thoát (tab nền trên điện thoại có thể chậm nhịp)
 export function planStep(room, now) {
   if (!room || !room.players) return null;
 
@@ -56,6 +57,15 @@ export function planStep(room, now) {
 
   // 2) Phòng chờ: đủ người và tất cả đã bấm "Sẵn sàng" thì tự bắt đầu
   if (room.phase === 'lobby') {
+    // Người đã thoát (quá LOBBY_IDLE_MS không có nhịp tim) thì bị xóa khỏi danh sách phòng chờ
+    const stale = Object.keys(room.players).filter(id => { const p = room.players[id]; return !p.bot && now - ((room.seen || {})[id] || p.t || 0) > LOBBY_IDLE_MS; });
+    const keep = Object.keys(room.players).filter(id => !stale.includes(id));
+    if (stale.length && keep.some(id => !room.players[id].bot)) {
+      const u = {};
+      stale.forEach(id => { u['players/' + id] = null; u['seen/' + id] = null; });
+      if (stale.includes(room.host)) u.host = keep.filter(id => !room.players[id].bot).sort((a, b) => (room.players[a].t || 0) - (room.players[b].t || 0))[0];
+      return { u };
+    }
     const ids = Object.keys(room.players);
     if (ids.length >= MIN && ids.length <= MAX && ids.every(id => room.players[id].ready)) return startPlan(room, ids, now);
     const at = lobbyFillAt(room);
