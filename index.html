@@ -936,6 +936,19 @@ async function caroLeave() {
   else await B.set(cbase() + 'seen/' + cme.pid, 0);                                            // đang chơi: giữ chỗ, coi như offline
   caroLeaveLocal(); render();
 }
+function caroOpp() {   // đối thủ (nếu mình là người chơi) và có đang offline không
+  if (!C || !cme || cme.spec || !C.players) return null;
+  const id = Object.keys(C.players).find(x => x !== cme.pid);
+  return id ? { id, name: C.players[id].name, mark: C.players[id].mark, off: !isOnline(C, id) } : null;
+}
+let cOffSig = '';
+setInterval(() => { if (!cme || !C || cme.spec || game !== 'caro' || C.phase === 'wait') return; const o = caroOpp(), s = o ? String(o.off) : ''; if (s !== cOffSig) { cOffSig = s; caroRender(); } }, 2000);
+async function caroClaim() {   // đối thủ đã rời: người còn lại nhận thắng ngay
+  const o = caroOpp(), mark = caroMark(); if (!C || !o || !o.off || C.phase !== 'play' || !mark) return;
+  const players = C.players;
+  await B.update({ [cbase() + 'phase']: 'end', [cbase() + 'winner']: mark, [cbase() + 'winLine']: null, [cbase() + 'resigned']: null, [cbase() + 'left']: o.mark });
+  await caroRecord(players, mark);
+}
 const caroMark = () => (C && C.players && C.players[cme.pid] && C.players[cme.pid].mark) || null;
 async function caroMove(r, c) {
   const mark = caroMark();
@@ -951,7 +964,7 @@ async function caroMove(r, c) {
 }
 async function caroRematch() {   // chơi lại: đổi quân X và O
   if (!C || cme.spec || C.phase !== 'end') return;
-  const u = { [cbase() + 'phase']: 'play', [cbase() + 'board']: null, [cbase() + 'turn']: 'X', [cbase() + 'last']: null, [cbase() + 'winner']: null, [cbase() + 'winLine']: null, [cbase() + 'moves']: 0 };
+  const u = { [cbase() + 'phase']: 'play', [cbase() + 'board']: null, [cbase() + 'turn']: 'X', [cbase() + 'last']: null, [cbase() + 'winner']: null, [cbase() + 'winLine']: null, [cbase() + 'resigned']: null, [cbase() + 'left']: null, [cbase() + 'moves']: 0 };
   Object.entries(C.players).forEach(([id, p]) => u[cbase() + 'players/' + id + '/mark'] = p.mark === 'X' ? 'O' : 'X');
   await B.update(u);
 }
@@ -1029,6 +1042,9 @@ function caroRoomHTML() {
   else if (canMove) todo = `Đến lượt bạn: bấm vào một ô trống để đánh ${mark}.`;
   else { todo = `Chờ ${nm(turnName)} đánh…`; dim = true; }
   if (C.phase === 'end' && C.resigned) todo += ` (${nm(byMark(C.resigned))} đã xin thua)`;
+  if (C.phase === 'end' && C.left) todo += ` (${nm(byMark(C.left))} đã rời phòng nên đối thủ được xử thắng)`;
+  const opp = caroOpp(), oppLeft = opp && opp.off && C.phase !== 'wait';
+  const leftNote = oppLeft ? `<div class="note" style="background:#FFF4E5;color:#B45309;border-radius:12px;padding:12px 14px;margin-bottom:10px">⚠️ <b>${esc(opp.name)}</b> đã rời phòng${C.phase === 'play' ? '. Bạn có thể nhận thắng ngay, hoặc cứ ngồi chờ, họ quay lại là chơi tiếp.' : '. Chưa thể chơi lại cho đến khi họ quay lại.'}${C.phase === 'play' ? '<div style="margin-top:8px"><button class="primary" data-act="cclaim">🏆 Nhận thắng ngay</button></div>' : ''}</div>` : '';
   const cells = [];
   for (let r = 0; r < CARO_SIZE; r++) for (let c = 0; c < CARO_SIZE; c++) {
     const k = ck(r, c), v = board[k] || '';
@@ -1039,13 +1055,14 @@ function caroRoomHTML() {
   const result = C.phase === 'end' ? (C.winner === 'draw' ? 'Hòa' : `${nm(byMark(C.winner))} (${C.winner}) thắng`) : '';
   return `<div class="cols"><div class="stack">
     <div class="status"><span class="chip ${C.phase === 'play' ? 'amber' : C.phase === 'end' ? 'green' : 'mute'}">${C.phase === 'play' ? '🎮 Đang chơi' : C.phase === 'end' ? '🏁 Kết thúc' : '⏳ Chờ đối thủ'}</span><span class="chip mute">Nước thứ ${C.moves || 0}</span>${result ? `<span class="chip green">${result}</span>` : ''}</div>
+    ${leftNote}
     <div class="todo ${dim ? 'dim' : ''}">${todo}</div>
     <div class="card"><div class="cboard">${cells.join('')}</div></div>
   </div><div class="stack">
     <div class="card"><div class="sec">Người chơi</div><div class="stack" style="gap:10px">${prow('X')}${prow('O')}</div></div>
     ${caroChatHTML()}
     <div class="card"><div class="row">
-      ${C.phase === 'end' && !cme.spec ? '<button class="primary" data-act="crematch">🔄 Chơi lại</button>' : ''}
+      ${C.phase === 'end' && !cme.spec ? `<button class="primary" data-act="crematch" ${oppLeft ? 'disabled' : ''}>🔄 Chơi lại</button>` : ''}
       ${C.phase === 'play' && !cme.spec ? '<button data-act="cresign">🏳️ Xin thua</button>' : ''}
       <button data-act="invite">📨 Mời bạn bè</button>
       <button class="ghost" data-act="leave">Rời phòng</button></div></div>
@@ -1086,6 +1103,7 @@ document.addEventListener('click', e => {
   if (a === 'rank') { showRank = !showRank; if (showRank) rankData = null; render(); return; }
   if (a === 'rankBg') { if (e.target === el) { showRank = false; render(); } return; }
   if (a === 'cresign') { caroResign(); return; }
+  if (a === 'cclaim') { caroClaim(); return; }
   if (a === 'go') {
     const g = el.dataset.game; if (g === game) return; donateOk = false; msgStatus = '';
     (async () => { if (game === 'masoi' && me) await leave(); if (game === 'caro' && cme) await caroLeave(); game = g; homeErr = ''; render(); })();
