@@ -102,6 +102,7 @@
 
   /* thẻ người chơi */
   .av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:15px;flex:0 0 38px}
+  .avw{position:relative;display:inline-block;flex:0 0 auto;line-height:0} .bdg{position:absolute;top:-9px;left:-7px;font-size:17px;line-height:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35));transform:rotate(-15deg);pointer-events:none} .bdg.sm{font-size:13px;top:-7px;left:-5px}
   .av.sm{width:28px;height:28px;flex-basis:28px;font-size:12px}
   .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
   .ptile{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line2);border-radius:12px;background:#fff;min-width:0}
@@ -407,7 +408,8 @@ function focusChat(pos) { const i = document.querySelector('[data-bind=chat]'); 
 /* ---------- Khung chung: thanh bên + đầu trang ---------- */
 const AV_COLORS = ['#1371E2', '#009765', '#E59700', '#EC4920', '#5817CF', '#0A8FB5', '#C2185B', '#6B7A8F'];
 const initial = n => { const t = String(n).replace(/^🤖\s*/, '').trim(); return (t[0] || '?').toUpperCase(); };
-const avatar = (n, cls = '') => { let h = 0; for (const c of String(n)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return `<span class="av ${cls}" style="background:${AV_COLORS[h % AV_COLORS.length]}">${esc(initial(n))}</span>`; };
+const rankBadge = key => { if (!key || !rankData || !rankData[key]) return ''; const i = rankList().findIndex(x => x.key === key); return i >= 0 && i < 3 && pts(rankData[key]) > 0 ? ['🥇', '🥈', '🥉'][i] : ''; };
+const avatar = (n, cls = '', key = '') => { const b = rankBadge(key); let h = 0; for (const c of String(n)) h = (h * 31 + c.charCodeAt(0)) >>> 0; const av = `<span class="av ${cls}" style="background:${AV_COLORS[h % AV_COLORS.length]}">${esc(initial(n))}</span>`; return b ? `<span class="avw">${av}<span class="bdg ${cls}" title="Top ${['1','2','3'][['🥇','🥈','🥉'].indexOf(b)]} cờ caro">${b}</span></span>` : av; };
 // Biểu tượng nét mảnh (vẽ lại theo kiểu thanh bên của Mazii)
 const ICONS = {
   ramen: '<path d="M4 11h16a8 8 0 0 1-16 0z"/><path d="M9 20h6"/><path d="M8.5 8c0-1.6 1-1.6 1-3.2M12 8c0-1.6 1-1.6 1-3.2M15.5 8c0-1.6 1-1.6 1-3.2"/>',
@@ -456,7 +458,7 @@ function shell(inner) {
         ${inRoom ? `<span class="chip">Phòng ${esc(cx.code)}</span>` : ''}
         ${inRoom ? '<button class="primary tb hide" data-act="invite">Mời bạn bè</button>' : ''}
         <button class="tb" data-act="help" style="background:var(--pri-soft);color:var(--pri)">Cách chơi</button>
-        ${cx ? `<span class="user">${avatar(cx.name)}</span>` : ''}
+        ${cx ? `<span class="user">${avatar(cx.name, '', game === 'caro' ? cx.pid : '')}</span>` : ''}
       </header>
       <main class="page">${notices}${inner}</main>
     </div>
@@ -980,7 +982,7 @@ function caroRender() {
   $app.innerHTML = shell(!cme ? caroHomeHTML() : !C ? '<div class="card">Đang vào phòng…</div>' : caroRoomHTML());
   const nl = document.getElementById('cchatlist'); if (nl) nl.scrollTop = stick ? nl.scrollHeight : top;
   if (bind) { const i = document.querySelector('[data-bind=' + bind + ']'); if (i && !i.disabled) { i.focus(); try { i.setSelectionRange(caret, caret); } catch (e) {} } }
-  if (rankData === null && !rankLoading && (showRank || !cme)) loadRank();
+  if (rankData === null && !rankLoading) loadRank();
 }
 function caroFocusChat(pos) { const i = document.querySelector('[data-bind=cchat]'); if (!i) return; i.focus(); try { i.setSelectionRange(pos, pos); } catch (e) {} }
 function caroChatHTML() {
@@ -1014,7 +1016,7 @@ function caroHomeHTML() {
     </div>` : `<div class="card searchcard">
       <div class="sbar">
         <div class="sbox">${ic('search')}<input data-bind="code" maxlength="8" placeholder="Nhập số phòng, ví dụ: 1234" value="${esc(homeCode)}" autocomplete="off"></div>
-        <div class="sel">${avatar(auth.name, 'sm')}<b style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(auth.name)}</b></div>
+        <div class="sel">${avatar(auth.name, 'sm', auth.key)}<b style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(auth.name)}</b></div>
         <button class="primary" data-act="join">Vào phòng</button>
       </div>
       <div class="tabsrow">${tabs}<span class="pill">${pts(me2)} điểm</span><span class="pill">${me2.win || 0} thắng · ${me2.loss || 0} thua · ${me2.draw || 0} hòa</span>
@@ -1050,7 +1052,7 @@ function caroRoomHTML() {
     const k = ck(r, c), v = board[k] || '';
     cells.push(`<button class="cc ${v ? v.toLowerCase() : ''} ${C.last === k ? 'last' : ''} ${win.has(k) ? 'win' : ''} ${!v && canMove ? 'my' : ''}" data-act="cell" data-r="${r}" data-c="${c}" data-m="${mark || ''}" ${v || !canMove ? 'disabled' : ''}>${v}</button>`);
   }
-  const prow = m => { const id = byMark(m); return `<div class="pl2 ${C.phase === 'play' && C.turn === m ? 'turn' : ''}"><span class="mk ${m.toLowerCase()}">${m}</span>${id ? avatar(players[id].name) : ''}<div><b>${nm(id)}${id === cme.pid ? ' (bạn)' : ''}</b><div class="note">${id ? (C.phase === 'play' && C.turn === m ? 'đang đến lượt' : '') : 'chờ đối thủ'}</div></div></div>`; };
+  const prow = m => { const id = byMark(m); return `<div class="pl2 ${C.phase === 'play' && C.turn === m ? 'turn' : ''}"><span class="mk ${m.toLowerCase()}">${m}</span>${id ? avatar(players[id].name, '', id) : ''}<div><b>${nm(id)}${id === cme.pid ? ' (bạn)' : ''}</b><div class="note">${id ? (C.phase === 'play' && C.turn === m ? 'đang đến lượt' : '') : 'chờ đối thủ'}</div></div></div>`; };
   const specs = Object.values(C.spectators || {});
   const result = C.phase === 'end' ? (C.winner === 'draw' ? 'Hòa' : `${nm(byMark(C.winner))} (${C.winner}) thắng`) : '';
   return `<div class="cols"><div class="stack">
