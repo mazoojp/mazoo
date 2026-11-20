@@ -58,7 +58,7 @@ export function planStep(room, now) {
   // 2) Phòng chờ: đủ người và tất cả đã bấm "Sẵn sàng" thì tự bắt đầu
   if (room.phase === 'lobby') {
     // Người đã thoát (quá LOBBY_IDLE_MS không có nhịp tim) thì bị xóa khỏi danh sách phòng chờ
-    const stale = Object.keys(room.players).filter(id => { const p = room.players[id]; return !p.bot && now - ((room.seen || {})[id] || p.t || 0) > LOBBY_IDLE_MS; });
+    const stale = Object.keys(room.players).filter(id => { const p = room.players[id]; return !p.bot && (!p.name || now - ((room.seen || {})[id] || p.t || 0) > LOBBY_IDLE_MS); });   // không tên = nút rác do bấm Sẵn sàng sau khi bị xóa
     const keep = Object.keys(room.players).filter(id => !stale.includes(id));
     if (stale.length && keep.some(id => !room.players[id].bot)) {
       const u = {};

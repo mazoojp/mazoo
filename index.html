@@ -305,6 +305,9 @@ function enter(m) {
     S = v;
     if (!S) { leaveLocal(); render(); return; }
     if (!beatSent) { beatSent = true; beat(); }
+    if (!me.spec && S.phase === 'lobby' && S.players && !S.players[me.pid] && me.name) {   // bị dọn nhầm (tab nền lâu): tự vào lại phòng chờ
+      B.update({ ['rooms/' + me.code + '/players/' + me.pid]: { name: me.name, alive: true, t: Date.now() }, ['rooms/' + me.code + '/seen/' + me.pid]: Date.now() });
+    }
     const sig = JSON.stringify(v, (k, x) => k === 'seen' ? undefined : x);   // nhịp tim của người khác không cần vẽ lại cả trang
     if (sig === lastSig) return;
     lastSig = sig;
@@ -319,8 +322,7 @@ function enter(m) {
 let lastSig = '', beatSent = false;
 const beat = () => { if (me && !me.spec && S) B.set(base() + 'seen/' + me.pid, Date.now()); };   // nhịp tim: báo mình còn online
 setInterval(beat, 10000);
-// Đóng tab/thoát trang khi đang ở phòng chờ: cố gắng xóa tên mình ngay (nếu không kịp, luật phòng chờ sẽ xóa sau ~75 giây)
-addEventListener('pagehide', () => { if (me && !me.spec && S && S.phase === 'lobby' && Object.values(S.players || {}).some(p => !p.bot && p !== S.players[me.pid])) B.update({ ['rooms/' + me.code + '/players/' + me.pid]: null, ['rooms/' + me.code + '/seen/' + me.pid]: null }); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) beat(); });   // quay lại tab: báo online ngay
 function leaveLocal() { if (unwatch) unwatch(); unwatch = null; S = null; me = null; store().removeItem('masoi_me'); }
 async function addBot() {
   if (!S || S.phase !== 'lobby' || S.host !== me.pid) return;
@@ -1091,7 +1093,7 @@ document.addEventListener('click', e => {
   else if (a === 'help') { showHelp = !showHelp; render(); }
   else if (a === 'addBot') addBot();
   else if (a === 'rmBot') B.set(base() + 'players/' + el.dataset.pid, null);
-  else if (a === 'lobbyReady') B.update({ [base() + 'players/' + me.pid + '/ready']: !(S.players[me.pid] && S.players[me.pid].ready), [base() + 'players/' + me.pid + '/readyAt']: Date.now() });
+  else if (a === 'lobbyReady') { if (S && S.players && S.players[me.pid]) B.update({ [base() + 'players/' + me.pid + '/ready']: !(S.players[me.pid] && S.players[me.pid].ready), [base() + 'players/' + me.pid + '/readyAt']: Date.now() }); }
   else if (a === 'start') sendCmd('start'); else if (a === 'again') sendCmd('again'); else if (a === 'ready') ready();
   else if (a === 'toggleRole') { showRole = !showRole; if (showRole) roleSeen = true; render(); }
   else if (a === 'invite') invite();
