@@ -18,7 +18,7 @@ window.FIREBASE_CONFIG = {
 
 // ---- Tab "Ủng hộ 1 bát ramen" ----
 // Bật/tắt tab: false = ẩn hẳn khỏi thanh bên và trang đầu (link ?game=donate cũng không mở được). Đổi thành true để hiện lại.
-window.SHOW_DONATE = false;
+window.SHOW_DONATE = true;
 // Điền thông tin NHẬN ỦNG HỘ CỦA CHÍNH BẠN. Để trống thì tab hiện "Tác giả chưa thêm cách ủng hộ".
 // Lưu ý: file này công khai nếu bạn đăng repo công khai lên GitHub, số tài khoản sẽ ai cũng thấy.
 window.DONATE = {
