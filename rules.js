@@ -1,0 +1,212 @@
+// Luật chơi Ma sói. Không phụ thuộc trình duyệt hay Firebase,
+// dùng chung cho bot quản trò (Node) và chế độ thử trong trang web.
+//
+// "Backend" B là đối tượng có: get(path), set(path, value), update({path: value}), watch(path, cb).
+
+export const ROLE_NAME = { wolf: 'Sói', seer: 'Tiên tri', guard: 'Bảo vệ', vill: 'Dân làng' };
+export const DUR = { night: 45, day: 120, vote: 60 };   // giây
+export const MIN = 4, MAX = 12;
+export const LOBBY_WAIT = 60;   // giây: thiếu người mà không ai vào thêm thì tự thêm người máy
+export const BOT_NAMES = ['Mít', 'Bơ', 'Na', 'Ổi', 'Xoài', 'Cam', 'Dừa', 'Lê', 'Mận', 'Nho', 'Khế', 'Sấu'];
+
+// Thời điểm phòng chờ sẽ tự thêm người máy và bắt đầu, hoặc null nếu chưa đủ điều kiện:
+// còn thiếu người (dưới MIN), có ít nhất 1 người thật và mọi người thật đều đã Sẵn sàng.
+export function lobbyFillAt(room) {
+  const pl = room && room.players ? room.players : {}, ids = Object.keys(pl);
+  const humans = ids.filter(id => !pl[id].bot);
+  if (!humans.length || ids.length >= MIN || !humans.every(id => pl[id].ready)) return null;
+  return Math.max(...ids.map(id => Math.max(pl[id].t || 0, pl[id].readyAt || 0))) + LOBBY_WAIT * 1000;
+}
+
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+export function assignRoles(ids) {
+  const n = ids.length, wolves = n <= 5 ? 1 : n <= 8 ? 2 : 3;
+  const roles = Array(wolves).fill('wolf'); roles.push('seer'); if (n >= 6) roles.push('guard');
+  while (roles.length < n) roles.push('vill');
+  shuffle(roles); const out = {}; ids.forEach((id, i) => out[id] = roles[i]); return out;
+}
+export function tally(votes) {
+  const c = {}; Object.values(votes || {}).forEach(t => { if (t) c[t] = (c[t] || 0) + 1; });
+  const max = Math.max(0, ...Object.values(c));
+  return { top: Object.keys(c).filter(k => c[k] === max), max };
+}
+export function winnerOf(players, roles, deadId) {
+  const alive = Object.keys(players).filter(id => players[id].alive && id !== deadId);
+  const wolves = alive.filter(id => roles[id] === 'wolf').length, others = alive.length - wolves;
+  if (wolves === 0) return 'Dân làng thắng! Đã diệt hết Sói.';
+  if (wolves >= others) return 'Sói thắng! Số Sói đã bằng hoặc hơn dân.';
+  return null;
+}
+const aliveIds = room => Object.keys(room.players || {}).filter(id => room.players[id].alive);
+
+/* ---------- Kế hoạch bước tiếp theo của một phòng ----------
+   Trả về { u } với u là các khóa cập nhật tương đối so với rooms/<mã>/, hoặc null nếu chưa cần làm gì.
+   Mọi giá trị là tuyệt đối (không tăng dần), nên chạy lặp hai lần vẫn ra cùng kết quả. */
+export function planStep(room, now) {
+  if (!room || !room.players) return null;
+
+  // 1) Lệnh do người chơi gửi (bắt đầu / ván mới)
+  if (room.cmd) {
+    const c = room.cmd, ids = Object.keys(room.players);
+    if (c.type === 'start' && room.phase === 'lobby' && ids.length >= MIN && ids.length <= MAX && (c.by === room.host || !room.players[room.host])) return startPlan(room, ids, now);
+    if (c.type === 'again' && room.phase === 'end') return againPlan(room);
+    return { u: { cmd: null } };   // lệnh không hợp lệ: bỏ
+  }
+
+  // 2) Phòng chờ: đủ người và tất cả đã bấm "Sẵn sàng" thì tự bắt đầu
+  if (room.phase === 'lobby') {
+    const ids = Object.keys(room.players);
+    if (ids.length >= MIN && ids.length <= MAX && ids.every(id => room.players[id].ready)) return startPlan(room, ids, now);
+    const at = lobbyFillAt(room);
+    if (at && now >= at) {   // chờ đủ lâu mà vẫn thiếu người: thêm người máy cho đủ MIN rồi bắt đầu
+      const used = ids.map(id => room.players[id].name), add = [];
+      for (let i = 0; ids.length + add.length < MIN; i++) {
+        const nm = '🤖 ' + (BOT_NAMES.find(x => !used.includes('🤖 ' + x)) || 'Bot' + i); used.push(nm);
+        let id = 'bot_auto' + i; while (room.players[id]) id += 'x';
+        add.push([id, nm]);
+      }
+      const plan = startPlan(room, ids.concat(add.map(a => a[0])), now);
+      add.forEach(([id, nm]) => { delete plan.u['players/' + id + '/alive']; delete plan.u['players/' + id + '/ready']; plan.u['players/' + id] = { name: nm, alive: true, t: now, bot: true }; });
+      return plan;
+    }
+    return null;
+  }
+
+  const expired = room.deadline && now >= room.deadline;
+  if (room.phase === 'night') {
+    const roles = room.roles || {}, n = room.night || {}, wv = n.wolf || {}, al = aliveIds(room);
+    const wolves = al.filter(id => roles[id] === 'wolf');
+    const seer = al.find(id => roles[id] === 'seer'), guard = al.find(id => roles[id] === 'guard');
+    const all = wolves.length > 0 && wolves.every(id => wv[id]) && (!seer || n.seer) && (!guard || n.guard);
+    if (all || expired) return nightPlan(room, now);
+  } else if (room.phase === 'day') {
+    const al = aliveIds(room), rd = room.ready || {};
+    if ((al.length && al.every(id => rd[id])) || expired) return { u: { phase: 'vote', votes: null, ready: null, deadline: now + DUR.vote * 1000, announce: 'Mọi người bỏ phiếu chọn người bị treo cổ.' } };
+  } else if (room.phase === 'vote') {
+    const al = aliveIds(room), v = room.votes || {};
+    if ((al.length && al.every(id => v[id])) || expired) return votePlan(room, now);
+  }
+  return null;
+}
+
+function startPlan(room, ids, now) {
+  const roles = assignRoles(ids), u = { cmd: null, phase: 'night', round: 1, night: null, votes: null, ready: null, botMem: null, seerLog: null, winner: null, chat: null, deadline: now + DUR.night * 1000, announce: 'Đêm 1 bắt đầu. Cả làng đi ngủ…' };
+  ids.forEach(id => { u['roles/' + id] = roles[id]; u['players/' + id + '/alive'] = true; u['players/' + id + '/ready'] = null; });
+  return { u };
+}
+function againPlan(room) {
+  const u = { cmd: null, phase: 'lobby', round: 0, roles: null, night: null, votes: null, ready: null, botMem: null, seerLog: null, winner: null, chat: null, announce: null, deadline: null };
+  Object.entries(room.players || {}).forEach(([id, p]) => { u['players/' + id + '/alive'] = true; u['players/' + id + '/ready'] = p.bot ? true : null; });   // bot luôn sẵn sàng
+  return { u };
+}
+function nightPlan(room, now) {
+  const players = room.players, roles = room.roles || {}, r = room.round, n = room.night || {}, al = aliveIds(room);
+  const wv = {};   // chỉ tính phiếu của Sói còn sống nhắm vào người còn sống
+  Object.entries(n.wolf || {}).forEach(([id, t]) => { if (al.includes(id) && roles[id] === 'wolf' && players[t] && players[t].alive) wv[id] = t; });
+  const t = tally(wv), target = t.top.length && t.max > 0 ? t.top[Math.floor(Math.random() * t.top.length)] : null;
+  const guardAlive = al.some(id => roles[id] === 'guard');
+  const saved = !!(target && guardAlive && n.guard === target);
+  const seerId = al.find(id => roles[id] === 'seer');
+  const u = { night: null, votes: null, ready: null };
+  if (seerId && n.seer && players[n.seer]) u['seerLog/' + r] = `Đêm ${r}: ${players[n.seer].name} ${roles[n.seer] === 'wolf' ? 'LÀ SÓI' : 'không phải Sói'}.`;
+  let dead = null, announce;
+  if (!target || saved) announce = 'Đêm qua yên bình, không ai chết.';
+  else { dead = target; u['players/' + dead + '/alive'] = false; announce = `Đêm qua ${players[dead].name} đã bị Sói cắn chết.`; }
+  const win = winnerOf(players, roles, dead);
+  if (win) { u.phase = 'end'; u.winner = win; u.deadline = null; } else { u.phase = 'day'; u.deadline = now + DUR.day * 1000; }
+  u.announce = announce;
+  return { u };
+}
+function votePlan(room, now) {
+  const players = room.players, roles = room.roles || {}, r = room.round, al = aliveIds(room);
+  const v = {}; Object.entries(room.votes || {}).forEach(([id, t]) => { if (al.includes(id) && players[t] && players[t].alive) v[id] = t; });
+  const t = tally(v), u = { night: null, votes: null, ready: null };
+  let dead = null, announce;
+  if (t.top.length === 1 && t.max > 0) { dead = t.top[0]; u['players/' + dead + '/alive'] = false; announce = `Làng treo cổ ${players[dead].name} (${ROLE_NAME[roles[dead]]}).`; }
+  else announce = 'Phiếu hòa hoặc không ai bỏ phiếu, hôm nay không ai bị treo cổ.';
+  const win = winnerOf(players, roles, dead);
+  if (win) { u.phase = 'end'; u.winner = win; u.announce = announce; u.deadline = null; }
+  else { u.phase = 'night'; u.round = r + 1; u.announce = announce + `\nĐêm ${r + 1} bắt đầu…`; u.deadline = now + DUR.night * 1000; }
+  return { u };
+}
+
+/* ---------- Bot người chơi (người máy) ----------
+   Người chơi có cờ bot:true tự hành động theo luật đơn giản, sau một độ trễ ngẫu nhiên cho giống người.
+   Độ trễ tính từ giờ bắt đầu bước (deadline - thời lượng) và một giá trị băm theo tên + vòng,
+   nên không cần lưu thêm trạng thái và chạy lặp vẫn cho cùng kết quả. */
+const hash = s => { let x = 2166136261; for (const c of String(s)) { x ^= c.charCodeAt(0); x = Math.imul(x, 16777619); } return ((x >>> 0) % 10000) / 10000; };
+const hpick = (arr, seed) => arr[Math.floor(hash(seed) * arr.length)];
+
+export function planBots(room, now) {
+  if (!room || !room.players || !room.roles || !room.deadline || !DUR[room.phase]) return null;
+  const al = aliveIds(room), roles = room.roles, r = room.round, ph = room.phase;
+  const bots = al.filter(id => room.players[id].bot); if (!bots.length) return null;
+  const el = now - (room.deadline - DUR[ph] * 1000), mem = room.botMem || {}, u = {};
+  if (ph === 'night') {
+    const n = room.night || {};
+    for (const b of bots) {
+      if (el < 3000 + hash(b + 'n' + r) * 15000) continue;
+      if (roles[b] === 'wolf' && !(n.wolf || {})[b]) {
+        const c = al.filter(id => roles[id] !== 'wolf'); if (c.length) u['night/wolf/' + b] = hpick(c, 'wolf' + r);   // Sói máy cùng chọn một mục tiêu
+      } else if (roles[b] === 'seer' && !n.seer) {
+        const checked = (mem[b] || {}).checked || {}, others = al.filter(id => id !== b), fresh = others.filter(id => !checked[id]);
+        const t = hpick(fresh.length ? fresh : others, b + 'seer' + r); if (t) { u['night/seer'] = t; u['botMem/' + b + '/checked/' + t] = roles[t] === 'wolf' ? 'wolf' : 'ok'; }
+      } else if (roles[b] === 'guard' && !n.guard) {
+        const last = (mem[b] || {}).last, c = al.filter(id => id !== last), t = hpick(c.length ? c : al, b + 'guard' + r);
+        if (t) { u['night/guard'] = t; u['botMem/' + b + '/last'] = t; }
+      }
+    }
+  } else if (ph === 'day') {
+    const rd = room.ready || {};
+    for (const b of bots) if (!rd[b] && el >= 10000 + hash(b + 'd' + r) * 40000) u['ready/' + b] = true;
+  } else if (ph === 'vote') {
+    const v = room.votes || {}, lead = tally(v);
+    for (const b of bots) {
+      if (v[b] || el < 4000 + hash(b + 'v' + r) * 26000) continue;
+      let c = al.filter(id => id !== b && !(roles[b] === 'wolf' && roles[id] === 'wolf')); if (!c.length) continue;
+      const known = Object.entries((mem[b] || {}).checked || {}).find(([id, x]) => x === 'wolf' && c.includes(id));
+      let t;
+      if (known) t = known[0];                                                             // Tiên tri máy bỏ phiếu cho Sói đã soi ra
+      else { const hot = lead.top.filter(id => c.includes(id)); t = hot.length && hash(b + 'bw' + r) < 0.5 ? hot[0] : hpick(c, b + 'vote' + r); }
+      u['votes/' + b] = t;
+    }
+  }
+  return Object.keys(u).length ? { u } : null;
+}
+
+export const planAll = (room, now) => planStep(room, now) || planBots(room, now);
+
+/* ---------- Chạy một bước cho một phòng ---------- */
+export async function stepRoom(B, code, room, now) {
+  const plan = planAll(room, now); if (!plan) return false;
+  const u = {}; for (const [k, v] of Object.entries(plan.u)) u['rooms/' + code + '/' + k] = v;
+  await B.update(u); return true;
+}
+
+/* ---------- Bot quản trò: theo dõi mọi phòng, chạy luật, dọn phòng cũ ---------- */
+export function runBot(B, { log = console.log, now = () => Date.now(), maxAgeMs = 12 * 3600 * 1000 } = {}) {
+  let rooms = {}, caroRooms = {}; const busy = {};
+  const tick = async () => {
+    for (const [code, room] of Object.entries(caroRooms || {})) {   // dọn phòng cờ caro quá cũ
+      if (room && room.createdAt && now() - room.createdAt > maxAgeMs && !busy['caro' + code]) {
+        busy['caro' + code] = true; try { await B.set('caro/' + code, null); log('Xóa phòng caro cũ', code); } finally { busy['caro' + code] = false; }
+      }
+    }
+    for (const [code, room] of Object.entries(rooms || {})) {
+      if (busy[code]) continue;
+      if (room && room.createdAt && now() - room.createdAt > maxAgeMs) { busy[code] = true; try { await B.set('rooms/' + code, null); log('Xóa phòng cũ', code); } finally { busy[code] = false; } continue; }
+      if (!planAll(room, now())) continue;
+      busy[code] = true;
+      try { if (await stepRoom(B, code, room, now())) log(new Date().toLocaleTimeString(), 'phòng', code, '→ bước tiếp'); }
+      catch (e) { log('Lỗi phòng', code, e && e.message); }
+      finally { busy[code] = false; }
+    }
+  };
+  const unwatch = B.watch('rooms', v => { rooms = v || {}; tick(); });
+  const unwatch2 = B.watch('caro', v => { caroRooms = v || {}; });
+  const iv = setInterval(tick, 1000);
+  const beat = () => B.set('meta/botBeat', now()).catch(() => {});
+  beat(); const iv2 = setInterval(beat, 5000);
+  return () => { clearInterval(iv); clearInterval(iv2); if (unwatch) unwatch(); if (unwatch2) unwatch2(); };
+}
