@@ -8,7 +8,13 @@
 //   projectId: "ten-du-an",
 //   appId: "..."
 // };
-window.FIREBASE_CONFIG = null;
+window.FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDe_ex5yppH0NdI2-V4sHXJsjPFoHVcxls",
+  authDomain: "mazoo-2e275.firebaseapp.com",
+  databaseURL: "https://mazoo-2e275-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "mazoo-2e275",
+  appId: "1:719000258250:web:a5eaf3e197b7bbf24b9633"
+};
 
 // ---- Tab "Ủng hộ 1 bát ramen" ----
 // Bật/tắt tab: false = ẩn hẳn khỏi thanh bên và trang đầu (link ?game=donate cũng không mở được). Đổi thành true để hiện lại.
