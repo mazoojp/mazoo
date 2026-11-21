@@ -1,0 +1,64 @@
+{
+  "rules": {
+    "rooms": {
+      ".read": true,
+      "$code": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "caro": {
+      ".read": true,
+      "$code": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "users": {
+      "$name": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "scores": {
+      ".read": true,
+      "$name": {
+        ".write": true
+      }
+    },
+    "meta": {
+      ".read": true,
+      ".write": true
+    },
+    "gchat": {
+      ".read": true,
+      "$id": {
+        ".write": "(!data.exists() && newData.exists()) || (data.exists() && !newData.exists() && data.child('t').val() < now - 604800000)",
+        ".validate": "newData.hasChildren(['name', 'text', 't'])",
+        "name": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 20" },
+        "text": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 300" },
+        "t": { ".validate": "newData.isNumber() && newData.val() > now - 3600000 && newData.val() < now + 3600000" },
+        "$other": { ".validate": false }
+      }
+    },
+    "messages": {
+      ".read": false,
+      "$id": {
+        ".write": "!data.exists() && newData.exists()",
+        ".validate": "newData.hasChildren(['text', 't'])",
+        "text": {
+          ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 500"
+        },
+        "name": {
+          ".validate": "newData.isString() && newData.val().length <= 30"
+        },
+        "t": {
+          ".validate": "newData.isNumber()"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    }
+  }
+}

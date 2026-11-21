@@ -210,7 +210,9 @@ function localBackend() {
     get: async p => clone(getp(p)),
     set: async (p, v) => { setp(p, v); save(); notify(); },
     update: async u => { for (const [p, v] of Object.entries(u)) setp(p, v); save(); notify(); },
-    watch: (p, cb) => { const w = { p, cb }; watchers.push(w); cb(clone(getp(p))); return () => { const i = watchers.indexOf(w); if (i >= 0) watchers.splice(i, 1); }; }
+    watch: (p, cb) => { const w = { p, cb }; watchers.push(w); cb(clone(getp(p))); return () => { const i = watchers.indexOf(w); if (i >= 0) watchers.splice(i, 1); }; },
+    watchLast: (p, n, cb) => { const w = { p, cb: v => cb(v ? Object.fromEntries(Object.entries(v).sort((a, b) => a[0] < b[0] ? -1 : 1).slice(-n)) : null) }; watchers.push(w); w.cb(clone(getp(p))); return () => { const i = watchers.indexOf(w); if (i >= 0) watchers.splice(i, 1); }; },
+    pruneOld: async (p, cutoff) => { const v = getp(p) || {}; for (const [k, m] of Object.entries(v)) if (m && m.t < cutoff) setp(p + '/' + k, null); save(); }
   };
 }
 
@@ -226,7 +228,13 @@ async function makeBackend() {
       get: async p => (await m.get(m.ref(db, p))).val(),
       set: (p, v) => m.set(m.ref(db, p), v),
       update: u => m.update(m.ref(db), u),
-      watch: (p, cb) => m.onValue(m.ref(db, p), s => cb(s.val()))
+      watch: (p, cb) => m.onValue(m.ref(db, p), s => cb(s.val())),
+      watchLast: (p, n, cb) => m.onValue(m.query(m.ref(db, p), m.orderByKey(), m.limitToLast(n)), s => cb(s.val())),
+      pruneOld: async (p, cutoff) => {   // xoá tối đa 30 tin cũ nhất đã quá hạn (luật chỉ cho xoá tin quá hạn)
+        const s = await m.get(m.query(m.ref(db, p), m.orderByKey(), m.limitToFirst(30))), v = s.val() || {}, u = {};
+        for (const [k, x] of Object.entries(v)) if (x && x.t < cutoff) u[p + '/' + k] = null;
+        if (Object.keys(u).length) await m.update(m.ref(db), u);
+      }
     };
   }
   return localBackend();
@@ -244,6 +252,8 @@ let B, S = null, unwatch = null, botBeat = 0, beatLoaded = false;
 let cDraft = '', auth = null, authName = '', authPass = '', authErr = '', authBusy = false, rankData = null, rankLoading = false, showRank = false, donateOk = false, msgName = '', msgText = '', msgStatus = '', msgSentAt = 0;
 let game = 'masoi', C = null, cme = null, cUnwatch = null, cSig = '', cBeatSent = false;
 let me = null;
+let gcMsgs = {}, gcUnwatch = null, gcDraft = '', gcName = '', gcSentAt = 0, gcErr = '';
+const GC_KEEP_DAYS = 7, GC_SHOW = 100;
 let showRole = false, pick = null, pickKey = '';
 let homeName = '', homeCode = '', homeErr = '';
 let chatTab = 'day', chatDraft = '', showHelp = false, roleSeen = false, inviteMsg = '', inviteText = '';
@@ -390,6 +400,7 @@ const donateOn = () => window.SHOW_DONATE !== false;   // config.js: SHOW_DONATE
 function render() {
   if (game === 'donate' && !donateOn()) game = 'masoi';
   if (game === 'donate') return $app.innerHTML = shell(donateHTML());
+  if (game === 'gchat') return gchatRender();
   if (game === 'caro') return caroRender();
   if (!me) return $app.innerHTML = shell(homeHTML());
   if (!S) return $app.innerHTML = shell('<div class="card">Đang vào phòng…</div>');
@@ -448,6 +459,7 @@ function shell(inner) {
       <button class="hb" data-act="side" title="Thu gọn / mở rộng">${ic('menu')}</button>
       ${gt('masoi', 'users', 'Ma sói')}
       ${gt('caro', 'grid', 'Cờ caro')}
+      ${gt('gchat', 'chat', 'Chat tổng')}
       ${donateOn() ? gt('donate', 'ramen', 'Ủng hộ 1 bát ramen') : ''}
       <div class="sep"></div>
       ${it('home', 'home', inRoom ? 'Rời phòng' : 'Trang chủ', !inRoom)}
@@ -535,7 +547,7 @@ function homeHTML() {
         <div class="sel"><span style="color:#868E96;font-size:13px">Tên</span><input data-bind="name" maxlength="16" placeholder="Tên của bạn" value="${esc(homeName)}" autocomplete="off"></div>
         <button class="primary" data-act="join">Vào phòng</button>
       </div>
-      <div class="tabsrow"><button class="pill on" data-act="go" data-game="masoi">🐺 Ma sói</button><button class="pill" data-act="go" data-game="caro">⭕ Cờ caro</button>${donateOn() ? '<button class="pill" data-act="go" data-game="donate">🍜 Ủng hộ 1 bát ramen</button>' : ''}<span class="pill">${MIN}–${MAX} người</span><span class="pill">Điện thoại &amp; máy tính</span><span class="pill">Thiếu người có người máy</span>
+      <div class="tabsrow"><button class="pill on" data-act="go" data-game="masoi">🐺 Ma sói</button><button class="pill" data-act="go" data-game="caro">⭕ Cờ caro</button><button class="pill" data-act="go" data-game="gchat">💬 Chat tổng</button>${donateOn() ? '<button class="pill" data-act="go" data-game="donate">🍜 Ủng hộ 1 bát ramen</button>' : ''}<span class="pill">${MIN}–${MAX} người</span><span class="pill">Điện thoại &amp; máy tính</span><span class="pill">Thiếu người có người máy</span>
         <button class="vm" data-act="help">Xem luật ›</button></div>
       ${homeErr ? `<div class="err">${esc(homeErr)}</div>` : '<div class="note" style="margin-top:6px">Phòng đã có thì bạn vào chơi cùng. Chưa có thì phòng mới được tạo với số này.</div>'}
     </div>
@@ -820,6 +832,49 @@ function donateHTML() {
   </div>`;
 }
 
+/* ============ Chat tổng (ai nhập tên cũng chat được; giữ 7 ngày, hiện 100 tin mới nhất) ============ */
+const gcSaved = () => store().getItem('gchat_name') || '';
+function gcStart() {
+  if (gcUnwatch) gcUnwatch();
+  gcErr = '';
+  gcUnwatch = B.watchLast('gchat', GC_SHOW, v => { gcMsgs = v || {}; if (game === 'gchat') render(); });
+  B.pruneOld('gchat', Date.now() - GC_KEEP_DAYS * 86400000).catch(() => {});
+}
+function gcStop() { if (gcUnwatch) gcUnwatch(); gcUnwatch = null; gcMsgs = {}; }
+function gcSetName() {
+  const n = gcName.trim().slice(0, 20);
+  if (!n) { gcErr = 'Hãy nhập tên của bạn.'; return render(); }
+  store().setItem('gchat_name', n); gcName = ''; gcErr = ''; render();
+  setTimeout(() => { const i = document.querySelector('[data-bind=gchat]'); if (i) i.focus(); }, 0);
+}
+async function gcSend() {
+  const name = gcSaved(), text = gcDraft.trim().slice(0, 300); if (!name || !text) return;
+  if (Date.now() - gcSentAt < 1500) { gcErr = 'Bạn gửi hơi nhanh, đợi 1–2 giây nhé.'; return render(); }
+  gcSentAt = Date.now(); gcDraft = ''; gcErr = '';
+  const id = Date.now().toString(36).padStart(9, '0') + '_' + rid();
+  try { await B.set('gchat/' + id, { name, text, t: Date.now() }); } catch (e) { gcErr = 'Chưa gửi được, thử lại sau.'; render(); }
+  const i = document.querySelector('[data-bind=gchat]'); if (i) i.focus();
+}
+function gcHTML() {
+  const name = gcSaved(), msgs = Object.entries(gcMsgs).sort((a, b) => a[0] < b[0] ? -1 : 1);
+  const tm = t => { const d = new Date(t), p = x => String(x).padStart(2, '0'); return (Date.now() - t > 86400000 ? p(d.getMonth() + 1) + '/' + p(d.getDate()) + ' ' : '') + p(d.getHours()) + ':' + p(d.getMinutes()); };
+  const list = msgs.length ? msgs.map(([, m]) => `<div class="msg"><span class="note" style="font-size:11px">${tm(m.t)}</span> <b style="${m.name === name ? '' : 'color:#009765'}">${esc(m.name || 'Ẩn danh')}:</b> ${esc(m.text)}</div>`).join('') : '<div class="note">Chưa có tin nhắn. Hãy là người đầu tiên!</div>';
+  return `<div class="stack"><div class="card chat" style="height:min(560px,70vh);position:static"><div class="sec">💬 Chat tổng <span class="note" style="font-weight:400">· mọi người chơi đều thấy · tin giữ ${GC_KEEP_DAYS} ngày</span></div>
+    <div id="gchatlist" style="flex:1;min-height:0;overflow-y:auto;background:#f9f9fb;border-radius:12px;padding:10px;margin-bottom:10px">${list}</div>
+    ${name ? `<div class="note" style="margin-bottom:6px">Bạn là <b>${esc(name)}</b> · <a href="#" data-act="gchange" style="color:var(--pri)">đổi tên</a></div>
+    <div class="chatrow"><input data-bind="gchat" maxlength="300" placeholder="Nhập tin nhắn…" value="${esc(gcDraft)}" autocomplete="off"><button class="primary" data-act="gsend">Gửi</button></div>`
+    : `<div class="chatrow"><input data-bind="gname" maxlength="20" placeholder="Nhập tên của bạn để chat" value="${esc(gcName)}" autocomplete="off"><button class="primary" data-act="gname">Vào chat</button></div>`}
+    ${gcErr ? `<div class="err">${esc(gcErr)}</div>` : ''}</div>
+    <div class="card"><p class="note">Không cần đăng nhập, chỉ cần một cái tên. Ai cũng có thể dùng tên bất kỳ nên đừng tin tuyệt đối vào tên người khác, và đừng ghi mật khẩu hay thông tin cá nhân.</p></div></div>`;
+}
+function gchatRender() {
+  const ae = document.activeElement, bind = ae && ae.dataset && ae.dataset.bind, caret = bind && ae.selectionStart != null ? ae.selectionStart : 0;
+  const ol = document.getElementById('gchatlist'), stick = !ol || ol.scrollTop + ol.clientHeight >= ol.scrollHeight - 8, top = ol ? ol.scrollTop : 0;
+  $app.innerHTML = shell(gcHTML());
+  const nl = document.getElementById('gchatlist'); if (nl) nl.scrollTop = stick ? nl.scrollHeight : top;
+  if (bind) { const i = document.querySelector('[data-bind=' + bind + ']'); if (i && !i.disabled) { i.focus(); try { i.setSelectionRange(caret, caret); } catch (e) {} } }
+}
+
 /* ============ Cờ caro (2 người, bàn 15×15, đủ 5 ô liền thì thắng) ============ */
 const CARO_SIZE = 15, CARO_WIN = 5;
 const ck = (r, c) => r + '_' + c;
@@ -1014,7 +1069,7 @@ async function caroSendChat() {
   caroFocusChat(0);
 }
 function caroHomeHTML() {
-  const tabs = `<button class="pill" data-act="go" data-game="masoi">🐺 Ma sói</button><button class="pill on" data-act="go" data-game="caro">⭕ Cờ caro</button>${donateOn() ? '<button class="pill" data-act="go" data-game="donate">🍜 Ủng hộ 1 bát ramen</button>' : ''}`;
+  const tabs = `<button class="pill" data-act="go" data-game="masoi">🐺 Ma sói</button><button class="pill on" data-act="go" data-game="caro">⭕ Cờ caro</button><button class="pill" data-act="go" data-game="gchat">💬 Chat tổng</button>${donateOn() ? '<button class="pill" data-act="go" data-game="donate">🍜 Ủng hộ 1 bát ramen</button>' : ''}`;
   const me2 = auth ? (rankList().find(x => x.key === auth.key) || { win: 0, loss: 0, draw: 0, games: 0 }) : null;
   const top = !auth ? `<div class="card searchcard">
       <div class="sec">Đăng nhập để chơi cờ caro</div>
@@ -1095,11 +1150,13 @@ async function submit(kind) {
 }
 document.addEventListener('input', e => {
   const k = e.target.dataset.bind; if (!k) return;
-  if (k === 'name') homeName = e.target.value; else if (k === 'chat') chatDraft = e.target.value; else if (k === 'cchat') cDraft = e.target.value; else if (k === 'mname') msgName = e.target.value; else if (k === 'mtext') msgText = e.target.value; else if (k === 'aname') authName = e.target.value; else if (k === 'apass') authPass = e.target.value; else homeCode = e.target.value.toUpperCase();
+  if (k === 'name') homeName = e.target.value; else if (k === 'chat') chatDraft = e.target.value; else if (k === 'cchat') cDraft = e.target.value; else if (k === 'gchat') gcDraft = e.target.value; else if (k === 'gname') gcName = e.target.value; else if (k === 'mname') msgName = e.target.value; else if (k === 'mtext') msgText = e.target.value; else if (k === 'aname') authName = e.target.value; else if (k === 'apass') authPass = e.target.value; else homeCode = e.target.value.toUpperCase();
 });
 document.addEventListener('keydown', e => {
   const k = e.target.dataset && e.target.dataset.bind;
   if (e.key === 'Enter' && k === 'chat') { e.preventDefault(); sendChat(); }
+  if (e.key === 'Enter' && k === 'gchat') { e.preventDefault(); gcSend(); }
+  if (e.key === 'Enter' && k === 'gname') { e.preventDefault(); gcSetName(); }
   if (e.key === 'Enter' && k === 'cchat') { e.preventDefault(); caroSendChat(); }
   if (e.key === 'Enter' && (k === 'aname' || k === 'apass')) { e.preventDefault(); caroLogin(); }
   if (e.key === 'Enter' && (k === 'code' || k === 'name')) { e.preventDefault(); game === 'caro' ? caroJoin() : joinOrCreate(); }
@@ -1111,6 +1168,9 @@ document.addEventListener('click', e => {
   if (a === 'cell') { caroMove(+el.dataset.r, +el.dataset.c); return; }
   if (a === 'crematch') { caroRematch(); return; }
   if (a === 'csend') { caroSendChat(); return; }
+  if (a === 'gsend') { gcSend(); return; }
+  if (a === 'gname') { gcSetName(); return; }
+  if (a === 'gchange') { store().removeItem('gchat_name'); gcName = ''; render(); return; }
   if (a === 'login') { caroLogin(); return; }
   if (a === 'register') { caroRegister(); return; }
   if (a === 'logout') { caroLogout(); return; }
@@ -1120,11 +1180,11 @@ document.addEventListener('click', e => {
   if (a === 'cclaim') { caroClaim(); return; }
   if (a === 'go') {
     const g = el.dataset.game; if (g === game) return; donateOk = false; msgStatus = '';
-    (async () => { if (game === 'masoi' && me) await leave(); if (game === 'caro' && cme) await caroLeave(); game = g; homeErr = ''; render(); })();
+    (async () => { if (game === 'masoi' && me) await leave(); if (game === 'caro' && cme) await caroLeave(); if (game === 'gchat') gcStop(); game = g; homeErr = ''; if (g === 'gchat') gcStart(); render(); })();
     return;
   }
   if (a === 'join') { game === 'caro' ? caroJoin() : joinOrCreate(); } else if (a === 'leave') { game === 'caro' ? caroLeave() : leave(); }
-  else if (a === 'home') { if (game === 'donate') { game = 'masoi'; render(); } else if (game === 'caro') { if (cme) caroLeave(); } else if (me) leave(); }
+  else if (a === 'home') { if (game === 'gchat') { gcStop(); game = 'masoi'; render(); } else if (game === 'donate') { game = 'masoi'; render(); } else if (game === 'caro') { if (cme) caroLeave(); } else if (me) leave(); }
   else if (a === 'toggleSpec') { if (S && S.host === me.pid) B.set(base() + 'allowSpec', !specOn()); }
   else if (a === 'side') { sideOpen = !sideOpen; render(); }
   else if (a === 'goChat') { const i = document.querySelector('[data-bind=chat]'); if (i) { i.scrollIntoView({ block: 'center', behavior: 'smooth' }); i.focus(); } }
@@ -1157,7 +1217,7 @@ await resumeAuth();
 cme = JSON.parse(store().getItem('caro_me') || 'null');
 if (cme && !auth) { store().removeItem('caro_me'); cme = null; }   // chưa đăng nhập thì không tự vào phòng
 const qGame = new URLSearchParams(location.search).get('game');
-if (me) game = 'masoi'; else if (cme || qGame === 'caro') game = 'caro'; else if (qGame === 'donate' && window.SHOW_DONATE !== false) game = 'donate';
+if (me) game = 'masoi'; else if (cme || qGame === 'caro') game = 'caro'; else if (qGame === 'donate' && window.SHOW_DONATE !== false) game = 'donate'; else if (qGame === 'chat') { game = 'gchat'; gcStart(); }
 if (game === 'caro') { if (cme) caroEnter(cme); else render(); } else if (me) enter(me); else render();
 </script>
 </body>
