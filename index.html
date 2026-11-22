@@ -401,6 +401,7 @@ function render() {
   if (game === 'donate' && !donateOn()) game = 'masoi';
   if (game === 'donate') return $app.innerHTML = shell(donateHTML());
   if (game === 'gchat') return gchatRender();
+  if (game === 'ngu') return nguRender();
   if (game === 'caro') return caroRender();
   if (!me) return $app.innerHTML = shell(homeHTML());
   if (!S) return $app.innerHTML = shell('<div class="card">Đang vào phòng…</div>');
@@ -460,6 +461,7 @@ function shell(inner) {
       ${gt('masoi', 'users', 'Ma sói')}
       ${gt('caro', 'grid', 'Cờ caro')}
       ${gt('gchat', 'chat', 'Chat tổng')}
+      ${gt('ngu', 'moon', 'Ngủ đêm')}
       ${donateOn() ? gt('donate', 'ramen', 'Ủng hộ 1 bát ramen') : ''}
       <div class="sep"></div>
       ${it('home', 'home', inRoom ? 'Rời phòng' : 'Trang chủ', !inRoom)}
@@ -547,7 +549,7 @@ function homeHTML() {
         <div class="sel"><span style="color:#868E96;font-size:13px">Tên</span><input data-bind="name" maxlength="16" placeholder="Tên của bạn" value="${esc(homeName)}" autocomplete="off"></div>
         <button class="primary" data-act="join">Vào phòng</button>
       </div>
-      <div class="tabsrow"><button class="pill on" data-act="go" data-game="masoi">🐺 Ma sói</button><button class="pill" data-act="go" data-game="caro">⭕ Cờ caro</button><button class="pill" data-act="go" data-game="gchat">💬 Chat tổng</button>${donateOn() ? '<button class="pill" data-act="go" data-game="donate">🍜 Ủng hộ 1 bát ramen</button>' : ''}<span class="pill">${MIN}–${MAX} người</span><span class="pill">Điện thoại &amp; máy tính</span><span class="pill">Thiếu người có người máy</span>
+      <div class="tabsrow"><button class="pill on" data-act="go" data-game="masoi">🐺 Ma sói</button><button class="pill" data-act="go" data-game="caro">⭕ Cờ caro</button><button class="pill" data-act="go" data-game="gchat">💬 Chat tổng</button><button class="pill" data-act="go" data-game="ngu">🌙 Ngủ đêm</button>${donateOn() ? '<button class="pill" data-act="go" data-game="donate">🍜 Ủng hộ 1 bát ramen</button>' : ''}<span class="pill">${MIN}–${MAX} người</span><span class="pill">Điện thoại &amp; máy tính</span><span class="pill">Thiếu người có người máy</span>
         <button class="vm" data-act="help">Xem luật ›</button></div>
       ${homeErr ? `<div class="err">${esc(homeErr)}</div>` : '<div class="note" style="margin-top:6px">Phòng đã có thì bạn vào chơi cùng. Chưa có thì phòng mới được tạo với số này.</div>'}
     </div>
@@ -875,6 +877,81 @@ function gchatRender() {
   if (bind) { const i = document.querySelector('[data-bind=' + bind + ']'); if (i && !i.disabled) { i.focus(); try { i.setSelectionRange(caret, caret); } catch (e) {} } }
 }
 
+/* ============ Ngủ đêm: nằm ngủ kiếm tiền, xây súng, nâng cửa chống quái (chơi một mình, lưu trên máy) ============ */
+const NG_KEY = 'ngu_save_v1', NG_MAXT = 8;
+const nguNew = () => ({ gold: 30, bed: 1, door: 1, gun: 1, turrets: 0, wave: 1, best: 1, doorHp: 100, mHp: 30, spawn: 3, hitCd: 1.5, caught: 0, killed: 0, last: Date.now() });
+let NG = null, ngTimer = null, ngMsg = '', ngMsgT = 0, ngSaveT = 0, ngDraw = 0;
+const nIncome = () => 2 * Math.pow(1.3, NG.bed - 1);
+const nDoorMax = () => Math.round(100 * Math.pow(1.3, NG.door - 1));
+const nDps = () => NG.turrets * 5 * Math.pow(1.25, NG.gun - 1);
+const nMonMax = w => 30 * Math.pow(1.25, w - 1), nMonDmg = w => 5 * Math.pow(1.18, w - 1), nReward = w => 10 * Math.pow(1.2, w - 1);
+const NG_COST = { bed: () => 20 * Math.pow(1.45, NG.bed - 1), door: () => 25 * Math.pow(1.45, NG.door - 1), gun: () => 30 * Math.pow(1.5, NG.gun - 1), turret: () => 40 * Math.pow(1.8, NG.turrets), repair: () => (nDoorMax() - NG.doorHp) * 0.2 };
+const nf = x => x >= 1e9 ? (x / 1e9).toFixed(2) + 'B' : x >= 1e6 ? (x / 1e6).toFixed(2) + 'M' : x >= 1e4 ? (x / 1e3).toFixed(1) + 'k' : x >= 100 ? Math.floor(x) + '' : (Math.round(x * 10) / 10) + '';
+function nguSave() { if (NG) { NG.last = Date.now(); try { localStorage.setItem(NG_KEY, JSON.stringify(NG)); } catch (e) {} } }
+function nguSay(t) { ngMsg = t; ngMsgT = Date.now() + 4000; }
+function nguStart() {
+  try { NG = Object.assign(nguNew(), JSON.parse(localStorage.getItem(NG_KEY) || 'null') || {}); } catch (e) { NG = nguNew(); }
+  const away = Math.min(7200, Math.max(0, (Date.now() - NG.last) / 1000));   // ngủ lúc bạn vắng: nhận 50% thu nhập, tối đa 2 giờ
+  if (away > 60) { const g = away * nIncome() * 0.5; NG.gold += g; nguSay('😴 Bạn ngủ ' + Math.round(away / 60) + ' phút khi vắng mặt, nhận ' + nf(g) + ' vàng.'); }
+  NG.last = Date.now();
+  if (!ngTimer) ngTimer = setInterval(nguTick, 100);
+}
+function nguTick() {
+  if (game !== 'ngu' || !NG) return;
+  const dt = 0.1;
+  NG.gold += nIncome() * dt;
+  if (NG.spawn > 0) { NG.spawn -= dt; if (NG.spawn <= 0) { NG.mHp = nMonMax(NG.wave); NG.hitCd = 1.5; } }
+  else {
+    NG.mHp -= nDps() * dt;
+    if (NG.mHp <= 0) {
+      NG.gold += nReward(NG.wave); NG.killed++; NG.wave++; NG.best = Math.max(NG.best, NG.wave); NG.spawn = 2.5; NG.mHp = nMonMax(NG.wave);
+      NG.doorHp = Math.min(nDoorMax(), NG.doorHp + nDoorMax() * 0.1);
+    } else {
+      NG.hitCd -= dt;
+      if (NG.hitCd <= 0) { NG.hitCd += 1.5; NG.doorHp -= nMonDmg(NG.wave);
+        if (NG.doorHp <= 0) { NG.caught++; NG.wave = Math.max(1, NG.wave - 2); NG.doorHp = nDoorMax(); NG.spawn = 4; nguSay('💀 Quái phá cửa, bạn bị bắt! Lùi về đêm ' + NG.wave + '. Hãy nâng cửa và thêm súng.'); } }
+    }
+  }
+  if (Date.now() - ngSaveT > 5000) { ngSaveT = Date.now(); nguSave(); }
+  nguPaint();
+}
+function nguBuy(k) {
+  if (!NG) return; const c = NG_COST[k](); if (NG.gold < c) return nguSay('Chưa đủ vàng.');
+  if (k === 'turret' && NG.turrets >= NG_MAXT) return;
+  if (k === 'repair' && NG.doorHp >= nDoorMax() - 0.5) return;
+  NG.gold -= c;
+  if (k === 'bed') NG.bed++; else if (k === 'gun') NG.gun++; else if (k === 'turret') NG.turrets++;
+  else if (k === 'door') { NG.door++; NG.doorHp = nDoorMax(); } else if (k === 'repair') NG.doorHp = nDoorMax();
+  nguSave(); nguPaint();
+}
+function nguHTML() {
+  const b = (k, ic2, name, desc) => `<button class="nbuy" data-act="nbuy" data-k="${k}" id="nb_${k}"><span class="nic">${ic2}</span><span class="nt"><b>${name}</b><small>${desc}</small></span><span class="nc" id="nc_${k}"></span></button>`;
+  return `<div class="stack"><div class="card"><div class="sec">🌙 Ngủ đêm <span class="note" style="font-weight:400">· nằm ngủ kiếm vàng, xây súng, nâng cửa để cầm cự qua các đêm</span></div>
+    <div id="nscene" class="nscene"></div>
+    <div class="nbars"><div><small>🚪 Cửa <span id="ndh"></span></small><div class="bar"><i id="ndb" style="background:#009765"></i></div></div><div><small>👹 Quái đêm <span id="nwv"></span> <span id="nmh"></span></small><div class="bar"><i id="nmb" style="background:#EC4920"></i></div></div></div>
+    <div id="nstat" class="row" style="margin:8px 0;gap:8px;flex-wrap:wrap"></div>
+    <div id="nmsg" class="err" style="min-height:20px;margin:0 0 8px;display:none"></div>
+    <div class="ngrid">${b('bed', '🛏️', 'Giường', 'tăng vàng kiếm được mỗi giây')}${b('turret', '🔫', 'Xây thêm súng', 'tối đa ' + NG_MAXT + ' khẩu, tự bắn quái')}${b('gun', '💥', 'Nâng cấp súng', 'tăng sát thương mọi khẩu súng')}${b('door', '🚪', 'Nâng cấp cửa', 'tăng máu tối đa và sửa đầy')}${b('repair', '🔧', 'Sửa cửa', 'hồi đầy máu cửa')}</div></div>
+    <div class="card"><p class="note">Tiến trình lưu ngay trên máy này. Khi bạn tắt trang, nhân vật vẫn ngủ và nhận 50% vàng trong tối đa 2 giờ. Bị quái phá cửa thì lùi 2 đêm. <a href="#" data-act="nreset" style="color:var(--pri)">Chơi lại từ đầu</a></p></div></div>
+    <style>.nscene{background:linear-gradient(#1b2340,#2b3560);border-radius:14px;padding:14px;color:#fff;display:flex;align-items:flex-end;justify-content:space-between;min-height:130px;font-size:34px;gap:6px;overflow:hidden}.nscene .z{font-size:18px;opacity:.8}.nbars{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.nbars small{font-size:12px;color:var(--faint)}.bar{height:10px;border-radius:99px;background:#E5E7EB;overflow:hidden}.bar i{display:block;height:100%;width:0;transition:width .1s}.ngrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}.nbuy{display:flex;align-items:center;gap:10px;text-align:left;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid var(--line2)}.nbuy:disabled,.nbuy.no{opacity:.45}.nic{font-size:26px}.nt{flex:1;display:flex;flex-direction:column}.nt small{color:var(--faint);font-size:12px}.nc{font-weight:700;white-space:nowrap}</style>`;
+}
+function nguPaint() {
+  const $ = id => document.getElementById(id); if (!NG || !$('nscene')) return;
+  const mon = NG.spawn > 0 ? '' : '👹', door = NG.doorHp / nDoorMax();
+  const sc = `<span style="font-size:42px">🛏️<span class="z">💤</span></span><span>${'🔫'.repeat(NG.turrets) || '<span class="z">chưa có súng</span>'}</span><span>${door > 0.5 ? '🚪' : door > 0.2 ? '🚧' : '💥'}</span><span style="font-size:40px">${mon}</span>`;
+  if ($('nscene').dataset.s !== sc) { $('nscene').dataset.s = sc; $('nscene').innerHTML = sc; }
+  $('ndh').textContent = Math.max(0, Math.ceil(NG.doorHp)) + '/' + nDoorMax(); $('ndb').style.width = Math.max(0, door * 100) + '%';
+  $('nwv').textContent = NG.wave; $('nmh').textContent = NG.spawn > 0 ? '(sắp tới…)' : Math.max(0, Math.ceil(NG.mHp)) + '/' + Math.round(nMonMax(NG.wave));
+  $('nmb').style.width = NG.spawn > 0 ? '0%' : Math.max(0, NG.mHp / nMonMax(NG.wave) * 100) + '%';
+  $('nstat').innerHTML = `<span class="chip">🪙 ${nf(NG.gold)}</span><span class="chip">+${nf(nIncome())}/giây</span><span class="chip">🔫 ${NG.turrets}/${NG_MAXT} · ${nf(nDps())} sát thương/giây</span><span class="chip">🌙 Đêm ${NG.wave} (kỷ lục ${NG.best})</span><span class="chip">Diệt ${NG.killed} · Bị bắt ${NG.caught}</span>`;
+  const lv = { bed: 'cấp ' + NG.bed, turret: NG.turrets + '/' + NG_MAXT, gun: 'cấp ' + NG.gun, door: 'cấp ' + NG.door, repair: '' };
+  for (const k of Object.keys(NG_COST)) { const c = NG_COST[k](), full = (k === 'turret' && NG.turrets >= NG_MAXT) || (k === 'repair' && NG.doorHp >= nDoorMax() - 0.5);
+    $('nc_' + k).textContent = full ? (k === 'turret' ? 'Tối đa' : 'Đã đầy') : lv[k] + ' · 🪙' + nf(c); $('nb_' + k).classList.toggle('no', full || NG.gold < c); }
+  const m = $('nmsg'); if (Date.now() < ngMsgT) { m.style.display = ''; m.textContent = ngMsg; } else m.style.display = 'none';
+}
+function nguRender() { if (!NG) nguStart(); $app.innerHTML = shell(nguHTML()); nguPaint(); }
+document.addEventListener('visibilitychange', () => { if (document.hidden) nguSave(); });
+
 /* ============ Cờ caro (2 người, bàn 15×15, đủ 5 ô liền thì thắng) ============ */
 const CARO_SIZE = 15, CARO_WIN = 5;
 const ck = (r, c) => r + '_' + c;
@@ -1069,7 +1146,7 @@ async function caroSendChat() {
   caroFocusChat(0);
 }
 function caroHomeHTML() {
-  const tabs = `<button class="pill" data-act="go" data-game="masoi">🐺 Ma sói</button><button class="pill on" data-act="go" data-game="caro">⭕ Cờ caro</button><button class="pill" data-act="go" data-game="gchat">💬 Chat tổng</button>${donateOn() ? '<button class="pill" data-act="go" data-game="donate">🍜 Ủng hộ 1 bát ramen</button>' : ''}`;
+  const tabs = `<button class="pill" data-act="go" data-game="masoi">🐺 Ma sói</button><button class="pill on" data-act="go" data-game="caro">⭕ Cờ caro</button><button class="pill" data-act="go" data-game="gchat">💬 Chat tổng</button><button class="pill" data-act="go" data-game="ngu">🌙 Ngủ đêm</button>${donateOn() ? '<button class="pill" data-act="go" data-game="donate">🍜 Ủng hộ 1 bát ramen</button>' : ''}`;
   const me2 = auth ? (rankList().find(x => x.key === auth.key) || { win: 0, loss: 0, draw: 0, games: 0 }) : null;
   const top = !auth ? `<div class="card searchcard">
       <div class="sec">Đăng nhập để chơi cờ caro</div>
@@ -1169,6 +1246,8 @@ document.addEventListener('click', e => {
   if (a === 'crematch') { caroRematch(); return; }
   if (a === 'csend') { caroSendChat(); return; }
   if (a === 'gsend') { gcSend(); return; }
+  if (a === 'nbuy') { nguBuy(el.dataset.k); return; }
+  if (a === 'nreset') { if (confirm('Xoá hết tiến trình và chơi lại từ đầu?')) { NG = nguNew(); nguSave(); nguRender(); } return; }
   if (a === 'gname') { gcSetName(); return; }
   if (a === 'gchange') { store().removeItem('gchat_name'); gcName = ''; render(); return; }
   if (a === 'login') { caroLogin(); return; }
@@ -1180,11 +1259,11 @@ document.addEventListener('click', e => {
   if (a === 'cclaim') { caroClaim(); return; }
   if (a === 'go') {
     const g = el.dataset.game; if (g === game) return; donateOk = false; msgStatus = '';
-    (async () => { if (game === 'masoi' && me) await leave(); if (game === 'caro' && cme) await caroLeave(); if (game === 'gchat') gcStop(); game = g; homeErr = ''; if (g === 'gchat') gcStart(); render(); })();
+    (async () => { if (game === 'masoi' && me) await leave(); if (game === 'caro' && cme) await caroLeave(); if (game === 'gchat') gcStop(); if (game === 'ngu') nguSave(); game = g; homeErr = ''; if (g === 'gchat') gcStart(); if (g === 'ngu') nguStart(); render(); })();
     return;
   }
   if (a === 'join') { game === 'caro' ? caroJoin() : joinOrCreate(); } else if (a === 'leave') { game === 'caro' ? caroLeave() : leave(); }
-  else if (a === 'home') { if (game === 'gchat') { gcStop(); game = 'masoi'; render(); } else if (game === 'donate') { game = 'masoi'; render(); } else if (game === 'caro') { if (cme) caroLeave(); } else if (me) leave(); }
+  else if (a === 'home') { if (game === 'ngu') { nguSave(); game = 'masoi'; render(); } else if (game === 'gchat') { gcStop(); game = 'masoi'; render(); } else if (game === 'donate') { game = 'masoi'; render(); } else if (game === 'caro') { if (cme) caroLeave(); } else if (me) leave(); }
   else if (a === 'toggleSpec') { if (S && S.host === me.pid) B.set(base() + 'allowSpec', !specOn()); }
   else if (a === 'side') { sideOpen = !sideOpen; render(); }
   else if (a === 'goChat') { const i = document.querySelector('[data-bind=chat]'); if (i) { i.scrollIntoView({ block: 'center', behavior: 'smooth' }); i.focus(); } }
@@ -1217,7 +1296,7 @@ await resumeAuth();
 cme = JSON.parse(store().getItem('caro_me') || 'null');
 if (cme && !auth) { store().removeItem('caro_me'); cme = null; }   // chưa đăng nhập thì không tự vào phòng
 const qGame = new URLSearchParams(location.search).get('game');
-if (me) game = 'masoi'; else if (cme || qGame === 'caro') game = 'caro'; else if (qGame === 'donate' && window.SHOW_DONATE !== false) game = 'donate'; else if (qGame === 'chat') { game = 'gchat'; gcStart(); }
+if (me) game = 'masoi'; else if (cme || qGame === 'caro') game = 'caro'; else if (qGame === 'donate' && window.SHOW_DONATE !== false) game = 'donate'; else if (qGame === 'chat') { game = 'gchat'; gcStart(); } else if (qGame === 'ngu') { game = 'ngu'; nguStart(); }
 if (game === 'caro') { if (cme) caroEnter(cme); else render(); } else if (me) enter(me); else render();
 </script>
 </body>
