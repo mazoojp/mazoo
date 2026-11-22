@@ -945,20 +945,16 @@ const isBoss = w => w % 5 === 0;   // mỗi 5 đêm có BOSS: máu x2,5, đánh 
 const nMonMax = w => 30 * Math.pow(1.25, w - 1) * (isBoss(w) ? 2.5 : 1), nMonDmg = w => 5 * Math.pow(1.18, w - 1) * (isBoss(w) ? 1.5 : 1), nReward = w => 10 * Math.pow(1.2, w - 1) * (isBoss(w) ? 3 : 1);
 const NG_COST = { bed: () => 20 * Math.pow(1.45, NG.bed - 1), door: () => 25 * Math.pow(1.45, NG.door - 1), gun: () => 30 * Math.pow(1.5, NG.gun - 1), turret: () => 40 * Math.pow(1.8, NG.turrets), repair: () => (nDoorMax() - NG.doorHp) * 0.2 };
 const nf = x => x >= 1e9 ? (x / 1e9).toFixed(2) + 'B' : x >= 1e6 ? (x / 1e6).toFixed(2) + 'M' : x >= 1e4 ? (x / 1e3).toFixed(1) + 'k' : x >= 100 ? Math.floor(x) + '' : (Math.round(x * 10) / 10) + '';
-function nguSave() { if (NG) { NG.last = Date.now(); try { localStorage.setItem(NG_KEY, JSON.stringify(NG)); } catch (e) {} } }
+function nguSave() { if (false) { NG.last = Date.now(); try { localStorage.setItem(NG_KEY, JSON.stringify(NG)); } catch (e) {} } }
 function nguSay(t) { ngMsg = t; ngMsgT = Date.now() + 4000; }
 function nguStart() {
-  try { NG = Object.assign(nguNew(), JSON.parse(localStorage.getItem(NG_KEY) || 'null') || {}); } catch (e) { NG = nguNew(); }
-  const away = Math.min(7200, Math.max(0, (Date.now() - NG.last) / 1000));   // ngủ lúc bạn vắng: nhận 50% thu nhập, tối đa 2 giờ
-  if (away > 60) { const g = away * nIncome() * 0.5; NG.gold += g; nguSay('😴 Bạn ngủ ' + Math.round(away / 60) + ' phút khi vắng mặt, nhận ' + nf(g) + ' vàng.'); }
-  NG.last = Date.now();
   if (!ngTimer) ngTimer = setInterval(nguTick, 100);
   const sv = JSON.parse(store().getItem('ngu_room') || 'null'); if (sv && !NCm) ncEnter(sv);
 }
 function nguTick() {
   if (game !== 'ngu') return;
-  if (NCm) { ncTick(); return; }
-  if (!NG) return;
+  if (NCm) ncTick();
+  return;
   const dt = 0.1;
   NG.gold += nIncome() * dt;
   if (NG.spawn > 0) { NG.spawn -= dt; if (NG.spawn <= 0) { NG.mHp = nMonMax(NG.wave); NG.hitCd = 1.5; } }
@@ -986,18 +982,12 @@ function nguBuy(k) {
   nguSave(); nguPaint();
 }
 function nguHTML() {
-  const b = (k, ic2, name, desc) => `<button class="nbuy" data-act="nbuy" data-k="${k}" id="nb_${k}"><span class="nic">${ic2}</span><span class="nt"><b id="nn_${k}">${name}</b><small>${desc}</small></span><span class="nc" id="nc_${k}"></span></button>`;
-  return `<div class="stack"><div class="card"><div class="sec">🌙 Ngủ đêm <span class="note" style="font-weight:400">· nằm ngủ kiếm vàng, xây súng, nâng cửa để cầm cự qua các đêm</span></div>
-    <div id="nscene" class="nscene"></div>
-    <div class="nbars"><div><small>🚪 Cửa <span id="ndh"></span></small><div class="bar"><i id="ndb" style="background:#009765"></i></div></div><div><small>👹 Quái đêm <span id="nwv"></span> <span id="nmh"></span></small><div class="bar"><i id="nmb" style="background:#EC4920"></i></div></div></div>
-    <div id="nstat" class="row" style="margin:8px 0;gap:8px;flex-wrap:wrap"></div>
-    <div id="nmsg" class="err" style="min-height:20px;margin:0 0 8px;display:none"></div>
-    <div class="ngrid">${b('bed', '🛏️', 'Giường', 'tăng vàng kiếm được mỗi giây')}${b('turret', '🔫', 'Xây thêm súng', 'tối đa ' + NG_MAXT + ' khẩu, tự bắn quái')}${b('gun', '💥', 'Nâng cấp súng', 'tăng sát thương mọi khẩu súng')}${b('door', '🚪', 'Nâng cấp cửa', 'tăng máu tối đa và sửa đầy')}${b('repair', '🔧', 'Sửa cửa', 'hồi đầy máu cửa')}</div></div>
-    <div class="card"><div class="sec">👥 Chơi chung (2–4 người, cùng thủ một căn nhà)</div>
-      <div class="row" style="gap:8px;flex-wrap:wrap"><input data-bind="ncname" maxlength="20" placeholder="Tên của bạn" value="${esc(ncName || gcSaved())}" style="flex:1 1 140px" autocomplete="off"><input data-bind="nccode" maxlength="6" placeholder="Mã phòng" value="${esc(ncCode)}" style="flex:1 1 110px" autocomplete="off"><button class="primary" data-act="ncjoin">Vào / tạo phòng</button></div>
-      ${ncErr ? `<div class="err">${esc(ncErr)}</div>` : '<div class="note" style="margin-top:6px">Chưa có phòng với mã đó thì phòng mới được tạo. Gửi mã cho bạn bè để cùng vào.</div>'}</div>
-    <div class="card"><p class="note">Tiến trình lưu ngay trên máy này. Khi bạn tắt trang, nhân vật vẫn ngủ và nhận 50% vàng trong tối đa 2 giờ. Bị quái phá cửa thì lùi 2 đêm. <a href="#" data-act="nreset" style="color:var(--pri)">Chơi lại từ đầu</a></p></div></div>
-    ${NG_CSS}`;
+  return `<div class="stack"><div class="card"><div class="sec">🌙 Ngủ đêm <span class="note" style="font-weight:400">· cùng bạn bè ngủ kiếm vàng, xây súng, nâng cửa để cầm cự qua các đêm</span></div>
+    <div class="nscene">${sceneSVG({ beds: [1], guns: [1], door: 1, doorPct: 1, wave: 1, spawning: true })}</div>
+    <div class="sec" style="margin-top:14px">👥 Vào phòng (2–4 người, cùng thủ một căn nhà)</div>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><input data-bind="ncname" maxlength="20" placeholder="Tên của bạn" value="${esc(ncName || gcSaved())}" style="flex:1 1 140px" autocomplete="off"><input data-bind="nccode" maxlength="6" placeholder="Mã phòng" value="${esc(ncCode)}" style="flex:1 1 110px" autocomplete="off"><button class="primary" data-act="ncjoin">Vào / tạo phòng</button></div>
+    ${ncErr ? `<div class="err">${esc(ncErr)}</div>` : '<div class="note" style="margin-top:6px">Chưa có phòng với mã đó thì phòng mới được tạo. Gửi mã cho bạn bè để cùng vào. Vào phòng rồi ván mới bắt đầu chạy.</div>'}</div>
+    <div class="card"><p class="note">Cách chơi: mỗi người có giường (ra vàng), súng riêng. Cả phòng chung một cửa và một con quái mỗi đêm; mỗi 5 đêm có BOSS. Cửa vỡ thì cả phòng lùi 2 đêm. Có chat riêng trong phòng.</p></div></div>${NG_CSS}`;
 }
 function nguPaint() {
   const $ = id => document.getElementById(id); if (!NG || !$('nscene')) return;
@@ -1014,7 +1004,7 @@ function nguPaint() {
     $('nc_' + k).textContent = full ? (k === 'turret' ? 'Tối đa' : 'Đã đầy') : lv[k] + ' · 🪙' + nf(c); $('nb_' + k).classList.toggle('no', full || NG.gold < c); }
   const m = $('nmsg'); if (Date.now() < ngMsgT) { m.style.display = ''; m.textContent = ngMsg; } else m.style.display = 'none';
 }
-function nguRender() { if (!NG) nguStart(); if (NCm) return ncRender(); $app.innerHTML = shell(nguHTML()); nguPaint(); }
+function nguRender() { if (!ngTimer) nguStart(); if (NCm) return ncRender(); $app.innerHTML = shell(nguHTML()); }
 document.addEventListener('visibilitychange', () => { if (document.hidden) nguSave(); });
 
 /* ============ Ngủ đêm chung: 2–4 người cùng thủ một cửa, mỗi người giường và súng riêng ============ */
