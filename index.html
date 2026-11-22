@@ -899,25 +899,17 @@ function bedSVG(x, y, sc, l) {
     ${t >= 5 ? `<text x="20" y="-14" font-size="18" text-anchor="middle">👑</text>` : ''}
     <text class="zz" x="46" y="4" font-size="13" fill="#fff" font-family="sans-serif">z z</text></g>`;
 }
-function doorSVG(x, y, l, hp, hit) {
-  const t = NT(l, 3), c = ['#a16207', '#92591b', '#6b7280', '#94a3b8', '#f59e0b', '#67e8f9'][t - 1], d = `M${x} ${y + 110} V${y + 30} Q${x} ${y} ${x + 32} ${y} Q${x + 64} ${y} ${x + 64} ${y + 30} V${y + 110}Z`;
-  let g = t >= 5 ? `<ellipse cx="${x + 32}" cy="${y + 60}" rx="52" ry="68" fill="${c}" opacity=".22"/>` : '';
-  g += `<path d="${d}" fill="${c}" stroke="#1f2937" stroke-width="3"/>`;
-  if (t <= 2) for (const i of [1, 2, 3]) g += `<line x1="${x + i * 16}" y1="${y + 6}" x2="${x + i * 16}" y2="${y + 110}" stroke="#00000040" stroke-width="2"/>`;
-  if (t >= 2) for (let i = 0; i < t; i++) g += `<rect x="${x}" y="${y + 36 + i * 16}" width="64" height="7" fill="${t >= 5 ? '#fff7' : '#1f293755'}"/>`;
-  if (t >= 3) for (const [a, b] of [[8, 40], [56, 40], [8, 100], [56, 100]]) g += `<circle cx="${x + a}" cy="${y + b}" r="3" fill="#e5e7eb"/>`;
-  if (t >= 4) g += `<path d="M${x + 32} ${y + 12} l8 14 h-16z" fill="#fff" opacity=".7"/>`;
-  g += `<circle cx="${x + 50}" cy="${y + 70}" r="4" fill="${t >= 5 ? '#fff' : '#fbbf24'}"/>`;
-  if (hp < 0.55) g += `<polyline points="${x + 14},${y + 20} ${x + 24},${y + 44} ${x + 16},${y + 62} ${x + 30},${y + 88}" fill="none" stroke="#111827" stroke-width="2.5"/>`;
-  if (hp < 0.25) g += `<polyline points="${x + 52},${y + 28} ${x + 42},${y + 52} ${x + 54},${y + 78}" fill="none" stroke="#111827" stroke-width="2.5"/><circle cx="${x + 30}" cy="${y + 60}" r="9" fill="#111827" opacity=".8"/>`;
+const NG_DOOR_MAX = 50, NG_GUN_MAX = 49, NG_BOSS_MAX = 25, NG_MON_MAX = 50;
+const pad2 = n => String(n).padStart(2, '0'), imgTag = (kind, n, x, y, w, h, cls = '') => `<image ${cls ? `class="${cls}" ` : ''}href="img/${kind}/${pad2(n)}.webp" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMax meet"/>`;
+function doorSVG(x, y, l, hp, hit) {   // ảnh cửa 116×145 (vẽ bằng Flow), vết nứt vẽ đè lên theo máu
+  const w = 76, h = 95, X = x - 6, Y = 90; let g = imgTag('door', Math.min(NG_DOOR_MAX, l), X, Y, w, h);
+  if (hp < 0.55) g += `<polyline points="${X + 22},${Y + 14} ${X + 32},${Y + 38} ${X + 24},${Y + 56} ${X + 38},${Y + 82}" fill="none" stroke="#111827" stroke-width="2.5" stroke-linecap="round"/>`;
+  if (hp < 0.25) g += `<polyline points="${X + 58},${Y + 20} ${X + 48},${Y + 44} ${X + 60},${Y + 70}" fill="none" stroke="#111827" stroke-width="2.5" stroke-linecap="round"/><circle cx="${X + 38}" cy="${Y + 52}" r="9" fill="#111827" opacity=".8"/>`;
   return `<g class="${hit ? 'dk' : ''}">${g}</g>`;
 }
-function gunSVG(x, y, gl, shoot) {
-  const t = NT(gl, 3), bc = ['#6b7280', '#374151', '#2563eb', '#dc2626', '#a855f7', '#f59e0b'][t - 1], len = 8 + t * 2;
-  let g = `<rect x="${x}" y="${y + 8}" width="16" height="8" rx="2" fill="#4b5563"/><rect x="${x + 3}" y="${y + 4}" width="9" height="6" rx="2" fill="#6b7280"/>`;
-  g += t >= 3 ? `<rect x="${x + 10}" y="${y + 3}" width="${len}" height="3" fill="${bc}"/><rect x="${x + 10}" y="${y + 8}" width="${len}" height="3" fill="${bc}"/>` : `<rect x="${x + 10}" y="${y + 5}" width="${len}" height="4" fill="${bc}"/>`;
-  if (t >= 4) g += `<circle cx="${x + 10 + len}" cy="${y + 7}" r="${t >= 5 ? 4 : 3}" fill="${bc}" opacity=".9"/>`;
-  if (shoot) g += `<circle class="muz" cx="${x + 12 + len}" cy="${y + 7}" r="${3 + t}" fill="${t >= 4 ? bc : '#fde047'}"/>`;
+function gunSVG(x, y, gl, shoot) {   // ảnh súng 182×137 (Flow), vẽ nhỏ lại
+  const w = 54, h = 40; let g = imgTag('gun', Math.min(NG_GUN_MAX, gl), x, y, w, h);
+  if (shoot) g += `<circle class="muz" cx="${x + w * .96}" cy="${y + h * .42}" r="4" fill="#fde047"/>`;
   return g;
 }
 function sceneSVG(o) {   // o: {beds:[lvl], guns:[lvl], door, doorPct, wave, spawning}
@@ -925,19 +917,17 @@ function sceneSVG(o) {   // o: {beds:[lvl], guns:[lvl], door, doorPct, wave, spa
   let g = `<defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#141a35"/><stop offset="1" stop-color="#2f3a6e"/></linearGradient></defs><rect width="600" height="200" fill="url(#sk)"/><circle cx="545" cy="36" r="20" fill="#fef3c7"/><circle cx="553" cy="30" r="18" fill="#2a3466"/>`;
   for (const [a, b] of [[40, 20], [120, 40], [210, 16], [300, 34], [400, 14], [470, 44], [90, 70]]) g += `<circle cx="${a}" cy="${b}" r="1.6" fill="#fff" opacity=".8"/>`;
   g += `<rect y="184" width="600" height="16" fill="#1f2937"/><rect y="184" width="600" height="3" fill="#374151"/>`;
-  o.beds.forEach((l, i) => { g += n === 1 ? bedImg(10, 48, 150, 138, l) : bedImg(4 + (i % 2) * 76, 88 + Math.floor(i / 2) * 40, 72, 64, l); });
-  o.guns.slice(0, 16).forEach((gl, i) => { g += gunSVG(166 + (i % 8) * 26, 128 + Math.floor(i / 8) * 28, gl, shoot); });
+  o.beds.forEach((l, i) => { g += n === 1 ? bedImg(10, 48, 150, 138, l) : bedImg(8 + (i % 2) * 78, 76 + Math.floor(i / 2) * 52, 66, 58, l); });
+  o.guns.slice(0, 16).forEach((gl, i) => { g += gunSVG(166 + (i % 8) * 24, 108 + Math.floor(i / 8) * 40, gl, shoot); });
   if (!o.guns.length) g += `<text x="250" y="160" fill="#9ca3af" font-size="13" text-anchor="middle" font-family="sans-serif">chưa có súng</text>`;
   g += doorSVG(372, 74, o.door, o.doorPct, shoot);
   if (!o.spawning) {
-    const sz = boss ? 92 : 52;
-    if (boss) g += `<circle cx="505" cy="${176 - sz / 2}" r="${sz * .75}" fill="#ef4444" opacity=".25"/><text x="505" y="${176 - sz - 10}" font-size="22" text-anchor="middle">👑</text>`;
-    g += `<text class="mb" x="505" y="176" font-size="${sz}" text-anchor="middle">${monEmoji(o.wave)}</text>`;
-    if (boss) g += `<text x="505" y="196" fill="#fca5a5" font-size="11" font-weight="700" text-anchor="middle" font-family="sans-serif">BOSS</text>`;
+    if (boss) g += `<ellipse cx="520" cy="130" rx="76" ry="62" fill="#ef4444" opacity=".22"/>` + `<g class="mb">${imgTag('boss', Math.min(NG_BOSS_MAX, o.wave / 5), 436, 74, 164, 108)}</g><text x="520" y="197" fill="#fca5a5" font-size="11" font-weight="700" text-anchor="middle" font-family="sans-serif">BOSS</text>`;
+    else g += `<g class="mb">${imgTag('mon', Math.min(NG_MON_MAX, o.wave - Math.floor(o.wave / 5)), 450, 74, 112, 110)}</g>`;
   }
   return `<svg viewBox="0 0 600 200" role="img" aria-label="Cảnh phòng ngủ">${g}</svg>`;
 }
-const setNames = (get, lv) => { const e = (k, t) => { const el = document.getElementById('nn_' + k); if (el && el.textContent !== t) el.textContent = t; }; e('bed', T_BED[Math.min(5, Math.floor((lv.bed - 1) / 9))] + ' (cấp ' + lv.bed + '/' + NG_BED_MAX + ')'); e('gun', T_GUN[NT(lv.gun, 3) - 1]); e('door', T_DOOR[NT(lv.door, 3) - 1]); };
+const setNames = (get, lv) => { const e = (k, t) => { const el = document.getElementById('nn_' + k); if (el && el.textContent !== t) el.textContent = t; }; e('bed', T_BED[Math.min(5, Math.floor((lv.bed - 1) / 9))] + ' (cấp ' + lv.bed + '/' + NG_BED_MAX + ')'); e('gun', T_GUN[Math.min(5, Math.floor((lv.gun - 1) / 9))] + ' (cấp ' + lv.gun + '/' + NG_GUN_MAX + ')'); e('door', T_DOOR[Math.min(5, Math.floor((lv.door - 1) / 9))] + ' (cấp ' + lv.door + '/' + NG_DOOR_MAX + ')'); };
 const nguNew = () => ({ gold: 30, bed: 1, door: 1, gun: 1, turrets: 0, wave: 1, best: 1, doorHp: 100, mHp: 30, spawn: 3, hitCd: 1.5, caught: 0, killed: 0, last: Date.now() });
 let NG = null, ngTimer = null, ngMsg = '', ngMsgT = 0, ngSaveT = 0, ngDraw = 0;
 const nIncome = () => 2 * Math.pow(1.3, NG.bed - 1);
@@ -1014,7 +1004,7 @@ let ncDraft = '', ncChatT = 0, ncChatSig = '', NCm = null, NCR = null, ncSt = nu
 const NC_MAX = 4, nOn = R => Object.entries(R.players || {}).filter(([id, p]) => (NCm && id === NCm.pid) || (p && p.seen > Date.now() - 30000)).sort((a, b) => (a[1].joined || 0) - (b[1].joined || 0) || (a[0] < b[0] ? -1 : 1));
 const ncRunner = R => { const o = nOn(R); return o.some(([id]) => id === R.host) ? R.host : (o[0] ? o[0][0] : null); };
 const ncDoorMax = l => Math.round(100 * Math.pow(1.3, l - 1)), pIncome = p => 2 * Math.pow(1.3, p.bed - 1), pDps = p => p.turrets * 5 * Math.pow(1.25, p.gun - 1);
-const ncFull = k => (k === 'turret' && ncP.turrets >= NG_MAXT) || (k === 'bed' && ncP.bed >= NG_BED_MAX) || (k === 'repair' && ncSt.doorHp >= ncDoorMax(((NCR || {}).cfg || {}).door || 1) - 0.5);
+const ncFull = k => (k === 'turret' && ncP.turrets >= NG_MAXT) || (k === 'bed' && ncP.bed >= NG_BED_MAX) || (k === 'gun' && ncP.gun >= NG_GUN_MAX) || (k === 'door' && (((NCR || {}).cfg || {}).door || 1) >= NG_DOOR_MAX) || (k === 'repair' && ncSt.doorHp >= ncDoorMax(((NCR || {}).cfg || {}).door || 1) - 0.5);
 const NC_COST = { bed: () => 20 * Math.pow(1.45, ncP.bed - 1), turret: () => 40 * Math.pow(1.8, ncP.turrets), gun: () => 30 * Math.pow(1.5, ncP.gun - 1), door: () => 25 * Math.pow(1.45, ((NCR && NCR.cfg && NCR.cfg.door) || 1) - 1), repair: () => Math.max(0, ncDoorMax((NCR.cfg || {}).door || 1) - ncSt.doorHp) * 0.2 };
 const ncBase = () => 'ngu/' + NCm.code + '/';
 const ncMult = R => 1 + 0.5 * (nOn(R).length - 1);
