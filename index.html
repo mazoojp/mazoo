@@ -900,7 +900,7 @@ function bedSVG(x, y, sc, l) {
     <text class="zz" x="46" y="4" font-size="13" fill="#fff" font-family="sans-serif">z z</text></g>`;
 }
 const NG_DOOR_MAX = 50, NG_GUN_MAX = 49, NG_BOSS_MAX = 25, NG_MON_MAX = 50;
-const pad2 = n => String(n).padStart(2, '0'), imgTag = (kind, n, x, y, w, h, cls = '') => `<image ${cls ? `class="${cls}" ` : ''}href="img/${kind}/${pad2(n)}.webp?v=2" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMax meet"/>`;
+const pad2 = n => String(n).padStart(2, '0'), imgTag = (kind, n, x, y, w, h, cls = '') => `<image ${cls ? `class="${cls}" ` : ''}href="img/${kind}/${pad2(n)}.webp?v=3" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMax meet"/>`;
 function doorSVG(x, y, l, hp, hit) {   // ảnh cửa 116×145 (vẽ bằng Flow), vết nứt vẽ đè lên theo máu
   const w = 76, h = 95, X = x - 6, Y = 90; let g = imgTag('door', Math.min(NG_DOOR_MAX, l), X, Y, w, h);
   if (hp < 0.55) g += `<polyline points="${X + 22},${Y + 14} ${X + 32},${Y + 38} ${X + 24},${Y + 56} ${X + 38},${Y + 82}" fill="none" stroke="#111827" stroke-width="2.5" stroke-linecap="round"/>`;
