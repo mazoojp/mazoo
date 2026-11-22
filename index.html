@@ -878,14 +878,71 @@ function gchatRender() {
 }
 
 /* ============ Ngủ đêm: nằm ngủ kiếm tiền, xây súng, nâng cửa chống quái (chơi một mình, lưu trên máy) ============ */
-const NG_CSS = `<style>.nscene{background:linear-gradient(#1b2340,#2b3560);border-radius:14px;padding:14px;color:#fff;display:flex;align-items:flex-end;justify-content:space-between;min-height:130px;font-size:34px;gap:6px;overflow:hidden}.nscene .z{font-size:18px;opacity:.8}.nbars{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.nbars small{font-size:12px;color:var(--faint)}.bar{height:10px;border-radius:99px;background:#E5E7EB;overflow:hidden}.bar i{display:block;height:100%;width:0;transition:width .1s}.ngrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}.nbuy{display:flex;align-items:center;gap:10px;text-align:left;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid var(--line2)}.nbuy:disabled,.nbuy.no{opacity:.45}.nic{font-size:26px}.nt{flex:1;display:flex;flex-direction:column}.nt small{color:var(--faint);font-size:12px}.nc{font-weight:700;white-space:nowrap}</style>`;
+const NG_CSS = `<style>.nscene{border-radius:14px;overflow:hidden;line-height:0;background:#1b2340}.nscene svg{width:100%;height:auto;display:block}.nscene .mb{animation:nmb 1s ease-in-out infinite;transform-box:fill-box;transform-origin:center bottom}.nscene .dk{animation:ndk .25s linear infinite}.nscene .muz{animation:nfl .35s linear infinite}.nscene .zz{animation:nzz 2.4s ease-in-out infinite}@keyframes nmb{50%{transform:translateY(-6px) scale(1.04)}}@keyframes ndk{50%{transform:translateX(2px)}}@keyframes nfl{0%,60%,100%{opacity:0}30%{opacity:1}}@keyframes nzz{50%{transform:translateY(-6px);opacity:.3}}.nscene .z{font-size:18px;opacity:.8}.nbars{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.nbars small{font-size:12px;color:var(--faint)}.bar{height:10px;border-radius:99px;background:#E5E7EB;overflow:hidden}.bar i{display:block;height:100%;width:0;transition:width .1s}.ngrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}.nbuy{display:flex;align-items:center;gap:10px;text-align:left;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid var(--line2)}.nbuy:disabled,.nbuy.no{opacity:.45}.nic{font-size:26px}.nt{flex:1;display:flex;flex-direction:column}.nt small{color:var(--faint);font-size:12px}.nc{font-weight:700;white-space:nowrap}</style>`;
 const NG_KEY = 'ngu_save_v1', NG_MAXT = 8;
+
+/* ---- Hình vẽ cảnh: cửa, súng, giường, quái đổi kiểu theo cấp ---- */
+const NT = (l, per = 3) => Math.min(6, 1 + Math.floor((l - 1) / per));
+const T_DOOR = ['Cửa gỗ', 'Cửa gỗ gia cố', 'Cửa sắt', 'Cửa thép', 'Cửa vàng', 'Cửa pha lê'], T_BED = ['Giường thường', 'Giường xanh', 'Giường nệm êm', 'Giường mộng mơ', 'Giường vàng', 'Giường hoàng gia'], T_GUN = ['Súng thường', 'Súng nòng dài', 'Súng đôi', 'Súng laser', 'Súng plasma', 'Súng Railgun vàng'];
+const MONS = ['🐛', '🦇', '👹', '🧟', '👻', '🐺', '🕷️', '👽'], BOSSES = ['🐉', '💀', '🦖', '🐙', '👾'];
+const monEmoji = w => isBoss(w) ? BOSSES[(w / 5 - 1) % BOSSES.length] : MONS[Math.floor((w - 1) / 2) % MONS.length];
+function bedSVG(x, y, sc, l) {
+  const t = NT(l, 4), c = ['#9ca3af', '#60a5fa', '#34d399', '#c084fc', '#fbbf24', '#f472b6'][t - 1];
+  return `<g transform="translate(${x},${y}) scale(${sc})">${t >= 5 ? `<circle cx="32" cy="20" r="48" fill="${c}" opacity=".2"/>` : ''}
+    <rect x="0" y="24" width="64" height="24" rx="4" fill="#5b4636"/><rect x="0" y="46" width="6" height="10" fill="#3b2f25"/><rect x="58" y="46" width="6" height="10" fill="#3b2f25"/>
+    ${t >= 3 ? `<rect x="-3" y="-10" width="5" height="58" rx="2" fill="${t >= 5 ? '#fde68a' : '#d1d5db'}"/><rect x="62" y="-10" width="5" height="58" rx="2" fill="${t >= 5 ? '#fde68a' : '#d1d5db'}"/>` : ''}
+    ${t >= 4 ? `<path d="M-3 -8 Q32 -26 67 -8 L67 6 Q32 -10 -3 6Z" fill="${c}" opacity=".75"/>` : ''}
+    <rect x="2" y="12" width="60" height="18" rx="7" fill="${c}"/><rect x="2" y="10" width="20" height="13" rx="6" fill="#f3f4f6"/>
+    ${t >= 2 ? `<rect x="26" y="12" width="3" height="18" fill="#fff" opacity=".5"/><rect x="40" y="12" width="3" height="18" fill="#fff" opacity=".5"/>` : ''}
+    ${t >= 5 ? `<text x="20" y="-14" font-size="18" text-anchor="middle">👑</text>` : ''}
+    <text class="zz" x="46" y="4" font-size="13" fill="#fff" font-family="sans-serif">z z</text></g>`;
+}
+function doorSVG(x, y, l, hp, hit) {
+  const t = NT(l, 3), c = ['#a16207', '#92591b', '#6b7280', '#94a3b8', '#f59e0b', '#67e8f9'][t - 1], d = `M${x} ${y + 110} V${y + 30} Q${x} ${y} ${x + 32} ${y} Q${x + 64} ${y} ${x + 64} ${y + 30} V${y + 110}Z`;
+  let g = t >= 5 ? `<ellipse cx="${x + 32}" cy="${y + 60}" rx="52" ry="68" fill="${c}" opacity=".22"/>` : '';
+  g += `<path d="${d}" fill="${c}" stroke="#1f2937" stroke-width="3"/>`;
+  if (t <= 2) for (const i of [1, 2, 3]) g += `<line x1="${x + i * 16}" y1="${y + 6}" x2="${x + i * 16}" y2="${y + 110}" stroke="#00000040" stroke-width="2"/>`;
+  if (t >= 2) for (let i = 0; i < t; i++) g += `<rect x="${x}" y="${y + 36 + i * 16}" width="64" height="7" fill="${t >= 5 ? '#fff7' : '#1f293755'}"/>`;
+  if (t >= 3) for (const [a, b] of [[8, 40], [56, 40], [8, 100], [56, 100]]) g += `<circle cx="${x + a}" cy="${y + b}" r="3" fill="#e5e7eb"/>`;
+  if (t >= 4) g += `<path d="M${x + 32} ${y + 12} l8 14 h-16z" fill="#fff" opacity=".7"/>`;
+  g += `<circle cx="${x + 50}" cy="${y + 70}" r="4" fill="${t >= 5 ? '#fff' : '#fbbf24'}"/>`;
+  if (hp < 0.55) g += `<polyline points="${x + 14},${y + 20} ${x + 24},${y + 44} ${x + 16},${y + 62} ${x + 30},${y + 88}" fill="none" stroke="#111827" stroke-width="2.5"/>`;
+  if (hp < 0.25) g += `<polyline points="${x + 52},${y + 28} ${x + 42},${y + 52} ${x + 54},${y + 78}" fill="none" stroke="#111827" stroke-width="2.5"/><circle cx="${x + 30}" cy="${y + 60}" r="9" fill="#111827" opacity=".8"/>`;
+  return `<g class="${hit ? 'dk' : ''}">${g}</g>`;
+}
+function gunSVG(x, y, gl, shoot) {
+  const t = NT(gl, 3), bc = ['#6b7280', '#374151', '#2563eb', '#dc2626', '#a855f7', '#f59e0b'][t - 1], len = 8 + t * 2;
+  let g = `<rect x="${x}" y="${y + 8}" width="16" height="8" rx="2" fill="#4b5563"/><rect x="${x + 3}" y="${y + 4}" width="9" height="6" rx="2" fill="#6b7280"/>`;
+  g += t >= 3 ? `<rect x="${x + 10}" y="${y + 3}" width="${len}" height="3" fill="${bc}"/><rect x="${x + 10}" y="${y + 8}" width="${len}" height="3" fill="${bc}"/>` : `<rect x="${x + 10}" y="${y + 5}" width="${len}" height="4" fill="${bc}"/>`;
+  if (t >= 4) g += `<circle cx="${x + 10 + len}" cy="${y + 7}" r="${t >= 5 ? 4 : 3}" fill="${bc}" opacity=".9"/>`;
+  if (shoot) g += `<circle class="muz" cx="${x + 12 + len}" cy="${y + 7}" r="${3 + t}" fill="${t >= 4 ? bc : '#fde047'}"/>`;
+  return g;
+}
+function sceneSVG(o) {   // o: {beds:[lvl], guns:[lvl], door, doorPct, wave, spawning}
+  const shoot = !o.spawning, boss = isBoss(o.wave), n = o.beds.length;
+  let g = `<defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#141a35"/><stop offset="1" stop-color="#2f3a6e"/></linearGradient></defs><rect width="600" height="200" fill="url(#sk)"/><circle cx="545" cy="36" r="20" fill="#fef3c7"/><circle cx="553" cy="30" r="18" fill="#2a3466"/>`;
+  for (const [a, b] of [[40, 20], [120, 40], [210, 16], [300, 34], [400, 14], [470, 44], [90, 70]]) g += `<circle cx="${a}" cy="${b}" r="1.6" fill="#fff" opacity=".8"/>`;
+  g += `<rect y="184" width="600" height="16" fill="#1f2937"/><rect y="184" width="600" height="3" fill="#374151"/>`;
+  o.beds.forEach((l, i) => { g += n === 1 ? bedSVG(18, 118, 1.35, l) : bedSVG(8 + (i % 2) * 74, 108 + Math.floor(i / 2) * 40, 0.78, l); });
+  o.guns.slice(0, 16).forEach((gl, i) => { g += gunSVG(166 + (i % 8) * 26, 128 + Math.floor(i / 8) * 28, gl, shoot); });
+  if (!o.guns.length) g += `<text x="250" y="160" fill="#9ca3af" font-size="13" text-anchor="middle" font-family="sans-serif">chưa có súng</text>`;
+  g += doorSVG(372, 74, o.door, o.doorPct, shoot);
+  if (!o.spawning) {
+    const sz = boss ? 92 : 52;
+    if (boss) g += `<circle cx="505" cy="${176 - sz / 2}" r="${sz * .75}" fill="#ef4444" opacity=".25"/><text x="505" y="${176 - sz - 10}" font-size="22" text-anchor="middle">👑</text>`;
+    g += `<text class="mb" x="505" y="176" font-size="${sz}" text-anchor="middle">${monEmoji(o.wave)}</text>`;
+    if (boss) g += `<text x="505" y="196" fill="#fca5a5" font-size="11" font-weight="700" text-anchor="middle" font-family="sans-serif">BOSS</text>`;
+  }
+  return `<svg viewBox="0 0 600 200" role="img" aria-label="Cảnh phòng ngủ">${g}</svg>`;
+}
+const setNames = (get, lv) => { const e = (k, t) => { const el = document.getElementById('nn_' + k); if (el && el.textContent !== t) el.textContent = t; }; e('bed', T_BED[NT(lv.bed, 4) - 1]); e('gun', T_GUN[NT(lv.gun, 3) - 1]); e('door', T_DOOR[NT(lv.door, 3) - 1]); };
 const nguNew = () => ({ gold: 30, bed: 1, door: 1, gun: 1, turrets: 0, wave: 1, best: 1, doorHp: 100, mHp: 30, spawn: 3, hitCd: 1.5, caught: 0, killed: 0, last: Date.now() });
 let NG = null, ngTimer = null, ngMsg = '', ngMsgT = 0, ngSaveT = 0, ngDraw = 0;
 const nIncome = () => 2 * Math.pow(1.3, NG.bed - 1);
 const nDoorMax = () => Math.round(100 * Math.pow(1.3, NG.door - 1));
 const nDps = () => NG.turrets * 5 * Math.pow(1.25, NG.gun - 1);
-const nMonMax = w => 30 * Math.pow(1.25, w - 1), nMonDmg = w => 5 * Math.pow(1.18, w - 1), nReward = w => 10 * Math.pow(1.2, w - 1);
+const isBoss = w => w % 5 === 0;   // mỗi 5 đêm có BOSS: máu x2,5, đánh mạnh x1,5, thưởng x3
+const nMonMax = w => 30 * Math.pow(1.25, w - 1) * (isBoss(w) ? 2.5 : 1), nMonDmg = w => 5 * Math.pow(1.18, w - 1) * (isBoss(w) ? 1.5 : 1), nReward = w => 10 * Math.pow(1.2, w - 1) * (isBoss(w) ? 3 : 1);
 const NG_COST = { bed: () => 20 * Math.pow(1.45, NG.bed - 1), door: () => 25 * Math.pow(1.45, NG.door - 1), gun: () => 30 * Math.pow(1.5, NG.gun - 1), turret: () => 40 * Math.pow(1.8, NG.turrets), repair: () => (nDoorMax() - NG.doorHp) * 0.2 };
 const nf = x => x >= 1e9 ? (x / 1e9).toFixed(2) + 'B' : x >= 1e6 ? (x / 1e6).toFixed(2) + 'M' : x >= 1e4 ? (x / 1e3).toFixed(1) + 'k' : x >= 100 ? Math.floor(x) + '' : (Math.round(x * 10) / 10) + '';
 function nguSave() { if (NG) { NG.last = Date.now(); try { localStorage.setItem(NG_KEY, JSON.stringify(NG)); } catch (e) {} } }
@@ -929,7 +986,7 @@ function nguBuy(k) {
   nguSave(); nguPaint();
 }
 function nguHTML() {
-  const b = (k, ic2, name, desc) => `<button class="nbuy" data-act="nbuy" data-k="${k}" id="nb_${k}"><span class="nic">${ic2}</span><span class="nt"><b>${name}</b><small>${desc}</small></span><span class="nc" id="nc_${k}"></span></button>`;
+  const b = (k, ic2, name, desc) => `<button class="nbuy" data-act="nbuy" data-k="${k}" id="nb_${k}"><span class="nic">${ic2}</span><span class="nt"><b id="nn_${k}">${name}</b><small>${desc}</small></span><span class="nc" id="nc_${k}"></span></button>`;
   return `<div class="stack"><div class="card"><div class="sec">🌙 Ngủ đêm <span class="note" style="font-weight:400">· nằm ngủ kiếm vàng, xây súng, nâng cửa để cầm cự qua các đêm</span></div>
     <div id="nscene" class="nscene"></div>
     <div class="nbars"><div><small>🚪 Cửa <span id="ndh"></span></small><div class="bar"><i id="ndb" style="background:#009765"></i></div></div><div><small>👹 Quái đêm <span id="nwv"></span> <span id="nmh"></span></small><div class="bar"><i id="nmb" style="background:#EC4920"></i></div></div></div>
@@ -944,11 +1001,12 @@ function nguHTML() {
 }
 function nguPaint() {
   const $ = id => document.getElementById(id); if (!NG || !$('nscene')) return;
-  const mon = NG.spawn > 0 ? '' : '👹', door = NG.doorHp / nDoorMax();
-  const sc = `<span style="font-size:42px">🛏️<span class="z">💤</span></span><span>${'🔫'.repeat(NG.turrets) || '<span class="z">chưa có súng</span>'}</span><span>${door > 0.5 ? '🚪' : door > 0.2 ? '🚧' : '💥'}</span><span style="font-size:40px">${mon}</span>`;
+  const door = NG.doorHp / nDoorMax();
+  const sc = sceneSVG({ beds: [NG.bed], guns: Array(NG.turrets).fill(NG.gun), door: NG.door, doorPct: door, wave: NG.wave, spawning: NG.spawn > 0 });
+  setNames(0, { bed: NG.bed, gun: NG.gun, door: NG.door });
   if ($('nscene').dataset.s !== sc) { $('nscene').dataset.s = sc; $('nscene').innerHTML = sc; }
   $('ndh').textContent = Math.max(0, Math.ceil(NG.doorHp)) + '/' + nDoorMax(); $('ndb').style.width = Math.max(0, door * 100) + '%';
-  $('nwv').textContent = NG.wave; $('nmh').textContent = NG.spawn > 0 ? '(sắp tới…)' : Math.max(0, Math.ceil(NG.mHp)) + '/' + Math.round(nMonMax(NG.wave));
+  $('nwv').textContent = NG.wave + (isBoss(NG.wave) ? ' 👑 BOSS' : ''); $('nmh').textContent = NG.spawn > 0 ? '(sắp tới…)' : Math.max(0, Math.ceil(NG.mHp)) + '/' + Math.round(nMonMax(NG.wave));
   $('nmb').style.width = NG.spawn > 0 ? '0%' : Math.max(0, NG.mHp / nMonMax(NG.wave) * 100) + '%';
   $('nstat').innerHTML = `<span class="chip">🪙 ${nf(NG.gold)}</span><span class="chip">+${nf(nIncome())}/giây</span><span class="chip">🔫 ${NG.turrets}/${NG_MAXT} · ${nf(nDps())} sát thương/giây</span><span class="chip">🌙 Đêm ${NG.wave} (kỷ lục ${NG.best})</span><span class="chip">Diệt ${NG.killed} · Bị bắt ${NG.caught}</span>`;
   const lv = { bed: 'cấp ' + NG.bed, turret: NG.turrets + '/' + NG_MAXT, gun: 'cấp ' + NG.gun, door: 'cấp ' + NG.door, repair: '' };
@@ -960,7 +1018,7 @@ function nguRender() { if (!NG) nguStart(); if (NCm) return ncRender(); $app.inn
 document.addEventListener('visibilitychange', () => { if (document.hidden) nguSave(); });
 
 /* ============ Ngủ đêm chung: 2–4 người cùng thủ một cửa, mỗi người giường và súng riêng ============ */
-let NCm = null, NCR = null, ncSt = null, ncP = null, ncUnwatch = null, ncWriteT = 0, ncStT = 0, ncKills = 0, ncName = '', ncCode = '', ncErr = '', ncSig = '', ncDirty = false;
+let ncDraft = '', ncChatT = 0, ncChatSig = '', NCm = null, NCR = null, ncSt = null, ncP = null, ncUnwatch = null, ncWriteT = 0, ncStT = 0, ncKills = 0, ncName = '', ncCode = '', ncErr = '', ncSig = '', ncDirty = false;
 const NC_MAX = 4, nOn = R => Object.entries(R.players || {}).filter(([id, p]) => (NCm && id === NCm.pid) || (p && p.seen > Date.now() - 30000)).sort((a, b) => (a[1].joined || 0) - (b[1].joined || 0) || (a[0] < b[0] ? -1 : 1));
 const ncRunner = R => { const o = nOn(R); return o.some(([id]) => id === R.host) ? R.host : (o[0] ? o[0][0] : null); };
 const ncDoorMax = l => Math.round(100 * Math.pow(1.3, l - 1)), pIncome = p => 2 * Math.pow(1.3, p.bed - 1), pDps = p => p.turrets * 5 * Math.pow(1.25, p.gun - 1);
@@ -1041,31 +1099,52 @@ async function ncLeave() {
     if (!others.length) await B.set('ngu/' + m.code, null); else await B.update({ ['ngu/' + m.code + '/players/' + m.pid]: null, ['ngu/' + m.code + '/host']: others[0] });
   } catch (e) {}
 }
+
+async function ncChatSend() {
+  const text = ncDraft.trim().slice(0, 200); if (!NCm || !text || Date.now() - ncChatT < 800) return;
+  ncChatT = Date.now(); ncDraft = ''; const i = document.querySelector('[data-bind=ncchat]'); if (i) { i.value = ''; i.focus(); }
+  const id = Date.now().toString(36).padStart(9, '0') + '_' + rid(), ids = Object.keys((NCR && NCR.chat) || {}).sort(), upd = { [ncBase() + 'chat/' + id]: { name: NCm.name, text, t: Date.now() } };
+  if (ids.length > 60) ids.slice(0, ids.length - 50).forEach(k => { upd[ncBase() + 'chat/' + k] = null; });   // giữ 50 tin mới nhất
+  try { await B.update(upd); } catch (e) { nguSay2('Chưa gửi được tin nhắn.'); }
+}
+function ncChatPaint() {
+  const el = document.getElementById('ncchat'); if (!el || !NCR) return;
+  const ms = Object.entries(NCR.chat || {}).sort((a, b) => a[0] < b[0] ? -1 : 1).slice(-50), sig = ms.length + ':' + (ms.length ? ms[ms.length - 1][0] : '');
+  if (sig === ncChatSig && el.dataset.r) return; ncChatSig = sig; el.dataset.r = 1;
+  const stick = el.scrollTop + el.clientHeight >= el.scrollHeight - 8 || !el.childNodes.length, top = el.scrollTop;
+  const col = n => { let h = 0; for (const c of String(n)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return AV_COLORS[h % AV_COLORS.length]; };
+  el.innerHTML = ms.length ? ms.map(([, m]) => `<div class="msg"><b style="color:${col(m.name)}">${esc(m.name || '?')}:</b> ${esc(m.text)}</div>`).join('') : '<div class="note">Chưa có tin nhắn. Nói gì đó với đồng đội đi!</div>';
+  el.scrollTop = stick ? el.scrollHeight : top;
+}
 function ncRender() {
+  const ae = document.activeElement, hadChat = !!(ae && ae.dataset && ae.dataset.bind === 'ncchat'); ncChatSig = '';
   if (!NCR || !ncSt) { $app.innerHTML = shell('<div class="card">Đang vào phòng…</div>'); return; }
   $app.innerHTML = shell(`<div class="stack"><div class="card"><div class="sec">🌙 Ngủ đêm chung · phòng <b>${esc(NCm.code)}</b> <button class="chip" data-act="nccopy" style="border:0;cursor:pointer">📋 Chép mã</button> <button data-act="ncleave" style="float:right">Rời phòng</button></div>
     <div id="nscene" class="nscene"></div>
     <div class="nbars"><div><small>🚪 Cửa chung <span id="ndh"></span></small><div class="bar"><i id="ndb" style="background:#009765"></i></div></div><div><small>👹 Quái đêm <span id="nwv"></span> <span id="nmh"></span></small><div class="bar"><i id="nmb" style="background:#EC4920"></i></div></div></div>
     <div id="nstat" class="row" style="margin:8px 0;gap:8px;flex-wrap:wrap"></div>
     <div id="nmsg" class="err" style="display:none;margin:0 0 8px"></div>
-    <div class="ngrid">${[['bed', '🛏️', 'Giường của bạn', 'tăng vàng bạn kiếm mỗi giây'], ['turret', '🔫', 'Xây thêm súng', 'tối đa ' + NG_MAXT + ' khẩu của bạn'], ['gun', '💥', 'Nâng cấp súng', 'tăng sát thương súng của bạn'], ['door', '🚪', 'Nâng cấp cửa chung', 'cả phòng được lợi, sửa đầy'], ['repair', '🔧', 'Sửa cửa chung', 'hồi đầy máu cửa']].map(([k, i, n, d]) => `<button class="nbuy" data-act="ncbuy" data-k="${k}" id="nb_${k}"><span class="nic">${i}</span><span class="nt"><b>${n}</b><small>${d}</small></span><span class="nc" id="nc_${k}"></span></button>`).join('')}</div></div>
-    <div class="card"><div class="sec">👥 Đồng đội</div><div id="ncteam" class="stack" style="gap:8px"></div><p class="note" style="margin-top:8px">Súng của mọi người cùng bắn một con quái, phòng càng đông quái càng khoẻ (+50% máu mỗi người thêm). Cửa vỡ thì cả phòng lùi 2 đêm. Chủ phòng thoát thì người online sớm nhất chạy tiếp.</p></div></div>${NG_CSS}`);
+    <div class="ngrid">${[['bed', '🛏️', 'Giường của bạn', 'tăng vàng bạn kiếm mỗi giây'], ['turret', '🔫', 'Xây thêm súng', 'tối đa ' + NG_MAXT + ' khẩu của bạn'], ['gun', '💥', 'Nâng cấp súng', 'tăng sát thương súng của bạn'], ['door', '🚪', 'Nâng cấp cửa chung', 'cả phòng được lợi, sửa đầy'], ['repair', '🔧', 'Sửa cửa chung', 'hồi đầy máu cửa']].map(([k, i, n, d]) => `<button class="nbuy" data-act="ncbuy" data-k="${k}" id="nb_${k}"><span class="nic">${i}</span><span class="nt"><b id="nn_${k}">${n}</b><small>${d}</small></span><span class="nc" id="nc_${k}"></span></button>`).join('')}</div></div>
+    <div class="card"><div class="sec">👥 Đồng đội</div><div id="ncteam" class="stack" style="gap:8px"></div><p class="note" style="margin-top:8px">Súng của mọi người cùng bắn một con quái, phòng càng đông quái càng khoẻ (+50% máu mỗi người thêm). Cửa vỡ thì cả phòng lùi 2 đêm. Chủ phòng thoát thì người online sớm nhất chạy tiếp. Mỗi 5 đêm có BOSS.</p></div>
+    <div class="card"><div class="sec">💬 Chat phòng <span class="note" style="font-weight:400">· chỉ người trong phòng này thấy</span></div><div id="ncchat" style="height:170px;overflow-y:auto;background:#f9f9fb;border-radius:12px;padding:10px;margin-bottom:8px"></div><div class="chatrow"><input data-bind="ncchat" maxlength="200" placeholder="Nhắn cho cả phòng…" value="${esc(ncDraft)}" autocomplete="off"><button class="primary" data-act="ncsend">Gửi</button></div></div></div>${NG_CSS}`);
   ncPaint();
+  if (hadChat) { const i = document.querySelector('[data-bind=ncchat]'); if (i) i.focus(); }
 }
 function ncPaint() {
   const $ = id => document.getElementById(id); if (!NCR || !ncSt || !$('nscene')) return;
   const st = ncSt, dm = ncDoorMax((NCR.cfg || {}).door || 1), door = st.doorHp / dm, mult = ncMult(NCR), on = nOn(NCR);
-  const tur = on.reduce((a, [id, p]) => a + (id === NCm.pid ? ncP.turrets : p.turrets || 0), 0);
-  const sc = `<span style="font-size:42px">${on.map(() => '🛏️').join('')}<span class="z">💤</span></span><span>${tur ? '🔫'.repeat(Math.min(tur, 16)) : '<span class="z">chưa có súng</span>'}</span><span>${door > 0.5 ? '🚪' : door > 0.2 ? '🚧' : '💥'}</span><span style="font-size:40px">${st.spawn > 0 ? '' : '👹'}</span>`;
+  const sc = sceneSVG({ beds: on.map(([id, p]) => id === NCm.pid ? ncP.bed : p.bed || 1), guns: on.flatMap(([id, p]) => { const q = id === NCm.pid ? ncP : p; return Array(q.turrets || 0).fill(q.gun || 1); }), door: (NCR.cfg || {}).door || 1, doorPct: door, wave: st.wave, spawning: st.spawn > 0 });
+  setNames(0, { bed: ncP.bed, gun: ncP.gun, door: (NCR.cfg || {}).door || 1 });
   if ($('nscene').dataset.s !== sc) { $('nscene').dataset.s = sc; $('nscene').innerHTML = sc; }
   $('ndh').textContent = Math.max(0, Math.ceil(st.doorHp)) + '/' + dm; $('ndb').style.width = Math.max(0, door * 100) + '%';
-  const mm = nMonMax(st.wave) * mult; $('nwv').textContent = st.wave; $('nmh').textContent = st.spawn > 0 ? '(sắp tới…)' : Math.max(0, Math.ceil(st.mHp)) + '/' + Math.round(mm); $('nmb').style.width = st.spawn > 0 ? '0%' : Math.max(0, st.mHp / mm * 100) + '%';
+  const mm = nMonMax(st.wave) * mult; $('nwv').textContent = st.wave + (isBoss(st.wave) ? ' 👑 BOSS' : ''); $('nmh').textContent = st.spawn > 0 ? '(sắp tới…)' : Math.max(0, Math.ceil(st.mHp)) + '/' + Math.round(mm); $('nmb').style.width = st.spawn > 0 ? '0%' : Math.max(0, st.mHp / mm * 100) + '%';
   $('nstat').innerHTML = `<span class="chip">🪙 ${nf(ncP.gold)}</span><span class="chip">+${nf(pIncome(ncP))}/giây</span><span class="chip">🔫 ${ncP.turrets}/${NG_MAXT} · ${nf(pDps(ncP))}/giây</span><span class="chip">🌙 Đêm ${st.wave} (kỷ lục ${st.best})</span><span class="chip">Diệt ${st.killed} · Bị bắt ${st.caught}</span>`;
   const lv = { bed: 'cấp ' + ncP.bed, turret: ncP.turrets + '/' + NG_MAXT, gun: 'cấp ' + ncP.gun, door: 'cấp ' + ((NCR.cfg || {}).door || 1), repair: '' };
   for (const k of Object.keys(NC_COST)) { const c = NC_COST[k](), full = (k === 'turret' && ncP.turrets >= NG_MAXT) || (k === 'repair' && st.doorHp >= dm - 0.5);
     $('nc_' + k).textContent = full ? (k === 'turret' ? 'Tối đa' : 'Đã đầy') : lv[k] + ' · 🪙' + nf(c); $('nb_' + k).classList.toggle('no', full || ncP.gold < c); }
   const team = on.map(([id, p]) => { const me2 = id === NCm.pid, q = me2 ? ncP : p; return `<div class="pl2" style="justify-content:space-between">${avatar(p.name || '?')}<div style="flex:1"><b>${esc(p.name || '?')}${me2 ? ' (bạn)' : ''}${id === ncRunner(NCR) ? ' ⚙️' : ''}</b><div class="note">🛏️${q.bed} · 🔫${q.turrets} · 💥${q.gun} · 🪙${nf(q.gold || 0)}</div></div>${me2 ? '' : `<button data-act="ncgift" data-pid="${id}">🎁 Tặng 50</button>`}</div>`; }).join('');
   if ($('ncteam').dataset.s !== team) { $('ncteam').dataset.s = team; $('ncteam').innerHTML = team; }
+  ncChatPaint();
   const m = $('nmsg'); if (Date.now() < ncMsgT) { m.style.display = ''; m.textContent = ncMsg; } else m.style.display = 'none';
 }
 window.addEventListener('beforeunload', () => {});
@@ -1345,13 +1424,14 @@ async function submit(kind) {
 }
 document.addEventListener('input', e => {
   const k = e.target.dataset.bind; if (!k) return;
-  if (k === 'name') homeName = e.target.value; else if (k === 'chat') chatDraft = e.target.value; else if (k === 'cchat') cDraft = e.target.value; else if (k === 'gchat') gcDraft = e.target.value; else if (k === 'ncname') ncName = e.target.value; else if (k === 'nccode') ncCode = e.target.value.toUpperCase(); else if (k === 'gname') gcName = e.target.value; else if (k === 'mname') msgName = e.target.value; else if (k === 'mtext') msgText = e.target.value; else if (k === 'aname') authName = e.target.value; else if (k === 'apass') authPass = e.target.value; else homeCode = e.target.value.toUpperCase();
+  if (k === 'name') homeName = e.target.value; else if (k === 'chat') chatDraft = e.target.value; else if (k === 'cchat') cDraft = e.target.value; else if (k === 'gchat') gcDraft = e.target.value; else if (k === 'ncname') ncName = e.target.value; else if (k === 'ncchat') ncDraft = e.target.value; else if (k === 'nccode') ncCode = e.target.value.toUpperCase(); else if (k === 'gname') gcName = e.target.value; else if (k === 'mname') msgName = e.target.value; else if (k === 'mtext') msgText = e.target.value; else if (k === 'aname') authName = e.target.value; else if (k === 'apass') authPass = e.target.value; else homeCode = e.target.value.toUpperCase();
 });
 document.addEventListener('keydown', e => {
   const k = e.target.dataset && e.target.dataset.bind;
   if (e.key === 'Enter' && k === 'chat') { e.preventDefault(); sendChat(); }
   if (e.key === 'Enter' && k === 'gchat') { e.preventDefault(); gcSend(); }
   if (e.key === 'Enter' && (k === 'ncname' || k === 'nccode')) { e.preventDefault(); ncJoin(); }
+  if (e.key === 'Enter' && k === 'ncchat') { e.preventDefault(); ncChatSend(); }
   if (e.key === 'Enter' && k === 'gname') { e.preventDefault(); gcSetName(); }
   if (e.key === 'Enter' && k === 'cchat') { e.preventDefault(); caroSendChat(); }
   if (e.key === 'Enter' && (k === 'aname' || k === 'apass')) { e.preventDefault(); caroLogin(); }
@@ -1367,6 +1447,7 @@ document.addEventListener('click', e => {
   if (a === 'gsend') { gcSend(); return; }
   if (a === 'nbuy') { nguBuy(el.dataset.k); return; }
   if (a === 'ncjoin') { ncJoin(); return; }
+  if (a === 'ncsend') { ncChatSend(); return; }
   if (a === 'ncleave') { ncLeave().then(() => nguRender()); return; }
   if (a === 'ncbuy') { ncBuy(el.dataset.k); return; }
   if (a === 'ncgift') { ncGift(el.dataset.pid); return; }
