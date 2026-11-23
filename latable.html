@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LA TABLE</title>
+<style>
+:root{--cream:#f6f2ea;--ink:#1d1a17;--mut:#6f675d;--wood:#5a3c2b;--sel:#e7dfd0}
+*{box-sizing:border-box;margin:0}
+body{background:var(--cream);color:var(--ink);font-family:"Helvetica Neue",Arial,sans-serif;min-height:100vh;overflow-x:hidden}
+.serif{font-family:Georgia,"Times New Roman",serif}
+header{display:flex;justify-content:space-between;align-items:center;padding:22px 48px}
+.logo{letter-spacing:.2em;font-size:18px}.logo small{display:block;font-size:8px;letter-spacing:.35em;color:var(--mut)}
+.tag{font-size:10px;letter-spacing:.3em;color:var(--mut)}
+main{position:relative;height:430px;max-width:1100px;margin:0 auto}
+.arc{position:absolute;left:50%;top:0;width:min(820px,54vw);height:min(410px,27vw);margin-left:calc(min(820px,54vw)/-2);border-radius:0 0 999px 999px;
+ background:radial-gradient(ellipse at 50% 35%,rgba(255,220,170,.10),rgba(0,0,0,.35) 100%),url(img/food/ban.webp) center/cover #4b2f20;box-shadow:0 18px 40px rgba(60,35,20,.28);overflow:hidden}
+
+.stage{position:absolute;left:50%;top:26px;width:300px;height:300px;margin-left:-150px;perspective:900px}
+.shadow{position:absolute;left:8%;right:8%;bottom:-6px;height:26px;border-radius:50%;background:radial-gradient(rgba(0,0,0,.45),transparent 70%);filter:blur(6px)}
+.plate{position:absolute;inset:0;will-change:transform,opacity}
+.plate svg,.plate img{width:100%;height:100%;display:block;filter:drop-shadow(0 10px 14px rgba(0,0,0,.35))}
+.side-l{position:absolute;left:4%;top:170px}
+.side-l h3{font-weight:400;font-size:24px;line-height:1.5}
+.side-l p{margin-top:14px;font-size:8px;letter-spacing:.2em;color:var(--mut);line-height:1.8}
+.side-r{position:absolute;right:4%;top:200px;font-size:9px;color:var(--mut);display:flex;gap:10px;align-items:center;line-height:1.5}
+.info{text-align:center;margin-top:-6px}
+.eyebrow{font-size:9px;letter-spacing:.3em;color:var(--mut)}
+.info h1{font-weight:400;font-size:52px;margin:14px 0 8px}
+.desc{font-size:11px;color:var(--mut)}
+.meta{display:flex;justify-content:center;gap:22px;align-items:center;margin:22px 0 10px}
+.price{font-size:20px}.meta span{font-size:10px;color:var(--mut)}
+.chips{font-size:9px;color:var(--mut);display:flex;gap:12px;justify-content:center}.chips i{width:1px;background:#bbb}
+.t{display:inline-block}
+.list{max-width:880px;margin:34px auto 0;position:relative;padding:0 10px}
+.q{display:flex;justify-content:space-between;font-size:9px;letter-spacing:.1em;color:var(--mut);margin-bottom:8px}
+.win{overflow:hidden;padding:4px 2px 14px;margin:-4px -2px 0}.cards{display:flex;gap:14px;position:relative;transition:transform .7s cubic-bezier(.3,.9,.3,1)}
+.card{flex:0 0 calc((100% - 42px)/4);min-width:0;display:flex;gap:12px;align-items:center;padding:12px;border:1px solid #e3dccf;border-radius:3px;background:#f9f6ef;cursor:pointer;position:relative;z-index:1;transition:transform .3s}
+.card:hover{transform:translateY(-3px)}
+.card .mini{width:46px;height:46px;flex:none}.card b{font-weight:400;font-size:13px;display:block}.card small{font-size:9px;color:var(--mut)}
+.pick{position:absolute;top:0;left:0;height:100%;border:1px solid #cfc4ae;background:var(--sel);border-radius:3px;box-shadow:0 6px 16px rgba(0,0,0,.1);transition:transform .6s cubic-bezier(.34,1.56,.64,1);z-index:0}
+.rnd{border:1px solid #b08a4a;background:#fbf7ee;color:#6b4f1d;border-radius:99px;padding:6px 14px;font-size:10px;letter-spacing:.12em;cursor:pointer;margin-right:14px;transition:.25s}.rnd:hover{background:#b08a4a;color:#fff}.rnd:disabled{opacity:.6;cursor:default}.rnd .die{display:inline-block}.rnd.spin .die{animation:rot .5s linear infinite}@keyframes rot{to{transform:rotate(360deg)}}.q>div:last-child{display:flex;align-items:center}
+.card.flash{animation:fl .9s ease 2}@keyframes fl{50%{background:#f0dfb4}}
+.nav{position:absolute;top:50%;width:30px;height:30px;border-radius:50%;border:1px solid #cfc4ae;background:transparent;cursor:pointer;transform:translateY(-10%)}
+.nav.l{left:-34px}.nav.r{right:-34px}
+.dots{display:flex;gap:8px;justify-content:center;margin-top:14px}.dots i{width:6px;height:2px;background:#cfc4ae;transition:.4s}.dots i.on{width:18px;background:#b08a4a}
+</style></head><body>
+<header><div class="logo serif">LA TABLE<small>RESTAURANT</small></div><div class="tag">— MỘT VÒNG VỊ NGON —</div><div style="width:90px"></div></header>
+<main>
+ <div class="arc"></div>
+ <div class="side-l serif"><h3>Ngon từ<br>điều giản dị.</h3><p>NGUYÊN LIỆU TƯƠI<br>HƯƠNG VỊ TRỌN VẸN</p></div>
+ <div class="side-r">↻<span>Bấm vào bàn.<br>Khám phá món ăn.</span></div>
+ <div class="stage"><div class="shadow"></div><div class="plate" id="plate"></div></div>
+</main>
+<section class="info">
+ <div class="eyebrow"><span class="t" id="eyebrow"></span></div>
+ <h1 class="serif"><span class="t" id="name"></span></h1>
+ <div class="desc"><span class="t" id="desc"></span></div>
+ <div class="meta"><div class="price serif"><span class="t" id="price"></span></div><span>◷ 15–20 phút</span><span>1 phần</span></div>
+ <div class="chips"><span class="t" id="chips"></span></div>
+</section>
+<section class="list">
+ <div class="q"><span>Hôm nay, bạn muốn <b>thưởng thức gì?</b></span><div><button class="rnd" id="rnd"><span class="die">🎲</span> QUAY NGẪU NHIÊN</button><span id="page"></span></div></div>
+ <div style="position:relative"><button class="nav l" id="prev">‹</button><button class="nav r" id="next">›</button>
+ <div class="win" id="win"><div class="cards" id="cards"><div class="pick" id="pick"></div></div></div></div>
+ <div class="dots" id="dots"></div>
+</section>
+<script>
+const dishes=[
+ {n:"Cá hồi sốt cam",p:"299.000 đ",e:"HẢI SẢN · TƯƠI & THANH",d:"Cá hồi áp chảo sốt cam, măng tây và khoai nghiền.",c:["Áp chảo","Sốt cam","Măng tây"],f:"salmon"},
+ {n:"Bò nướng hương thảo",p:"339.000 đ",e:"MÓN CHÍNH · ĐẬM ĐÀ",d:"Bò nướng hương thảo, khoai nướng và rau củ.",c:["Bò Úc","Hương thảo","Khoai nướng"],f:"beef"},
+ {n:"Cơm gà mật ong",p:"169.000 đ",e:"VỊ VIỆT · THÂN QUEN & TRỌN VỊ",d:"Gà nướng mật ong dịu ngọt, cơm vàng và rau tươi ăn kèm.",c:["Gà nướng","Mật ong","Cơm vàng"],f:"chicken"},
+ {n:"Salad xoài nhiệt đới",p:"149.000 đ",e:"NHẸ NHÀNG · TƯƠI MÁT",d:"Xoài, rau mầm và hạt điều trộn sốt chanh dây.",c:["Xoài","Rau mầm","Chanh dây"],f:"salad"},
+ {n:"Mì Ý hải sản",p:"219.000 đ",e:"ÂU · SỢI MỀM, SỐT ĐẬM",d:"Mì Ý sốt cà chua cùng tôm, mực và húng tây.",c:["Mì Ý","Tôm mực","Cà chua"],f:"pasta"},
+ {n:"Phở bò tái",p:"99.000 đ",e:"VỊ VIỆT · NƯỚC DÙNG HẦM 12 GIỜ",d:"Nước dùng xương bò trong vắt, bò tái mềm và hành lá.",c:["Bò tái","Bánh phở","Hành lá"],f:"pho"},
+ {n:"Bún chả nướng",p:"119.000 đ",e:"VỊ VIỆT · THƠM KHÓI THAN",d:"Chả nướng than hoa, bún tươi, rau thơm và nước chấm chua ngọt.",c:["Chả nướng","Bún","Rau thơm"],f:"buncha"},
+ {n:"Bánh xèo giòn",p:"109.000 đ",e:"VỊ VIỆT · VÀNG GIÒN",d:"Vỏ bánh giòn rụm, nhân tôm thịt giá đỗ, cuốn rau sống.",c:["Tôm thịt","Giá đỗ","Rau sống"],f:"banhxeo"},
+ {n:"Tôm sốt bơ tỏi",p:"259.000 đ",e:"HẢI SẢN · THƠM NỨC",d:"Tôm sú áp chảo bơ tỏi, rắc ngò tây, ăn kèm bánh mì nướng.",c:["Tôm sú","Bơ tỏi","Ngò tây"],f:"shrimp"},
+ {n:"Súp bí đỏ kem tươi",p:"89.000 đ",e:"KHAI VỊ · ẤM & MỊN",d:"Súp bí đỏ nghiền mịn, thêm kem tươi và hạt bí rang.",c:["Bí đỏ","Kem tươi","Hạt bí"],f:"soup"},
+ {n:"Pizza margherita",p:"189.000 đ",e:"Ý · ĐẾ MỎNG",d:"Đế mỏng nướng củi, sốt cà chua, phô mai mozzarella và húng quế.",c:["Mozzarella","Cà chua","Húng quế"],f:"pizza"},
+ {n:"Tiramisu cà phê",p:"79.000 đ",e:"TRÁNG MIỆNG · NGỌT DỊU",d:"Bánh tầng mascarpone thấm cà phê espresso, rắc cacao.",c:["Mascarpone","Espresso","Cacao"],f:"tiramisu"}];
+const R=(a,b)=>`<circle cx="${a}" cy="${b}"`;
+const foods={
+ salmon:`<rect x="70" y="95" width="120" height="70" rx="30" fill="#f08a52" transform="rotate(-18 130 130)"/><path d="M80 120q40-18 100 6" stroke="#ffc3a0" stroke-width="5" fill="none"/><g stroke="#4f9a4a" stroke-width="7" stroke-linecap="round"><path d="M175 190l40 25M185 175l42 14M170 200l30 30"/></g><circle cx="90" cy="195" r="22" fill="#f3e3b0"/>`,
+ beef:`<ellipse cx="115" cy="125" rx="60" ry="42" fill="#6b3524" transform="rotate(-12 115 125)"/><path d="M80 118q35-20 70 4" stroke="#a65d3d" stroke-width="6" fill="none"/><circle cx="195" cy="170" r="18" fill="#d7a04a"/><circle cx="170" cy="195" r="16" fill="#e0b25a"/><circle cx="205" cy="125" r="14" fill="#e66a3a"/><path d="M85 190l40 20" stroke="#3e7d3a" stroke-width="6"/>`,
+ chicken:`<g transform="rotate(-20 105 130)"><ellipse cx="100" cy="125" rx="46" ry="30" fill="#b3571f"/><ellipse cx="68" cy="150" rx="22" ry="15" fill="#c6682a"/><circle cx="130" cy="110" r="5" fill="#f3d9a0"/><circle cx="90" cy="120" r="4" fill="#f3d9a0"/></g><circle cx="175" cy="175" r="38" fill="#e9c649"/><g fill="#6aa84f"><circle cx="165" cy="170" r="4"/><circle cx="185" cy="180" r="4"/><circle cx="175" cy="188" r="4"/></g><circle cx="125" cy="205" r="22" fill="#3a1e18" stroke="#fff" stroke-width="5"/><g fill="#e66a2a" opacity=".9"><path d="M60 65q30-25 60 0l-10 12q-20-14-40 0z"/></g><g fill="#7bbf5a"><rect x="150" y="60" width="9" height="55" rx="4" transform="rotate(25 150 60)"/><rect x="170" y="62" width="9" height="55" rx="4" transform="rotate(30 170 62)"/></g>`,
+ pasta:`<g fill="none" stroke="#efc765" stroke-width="7" stroke-linecap="round"><path d="M80 140q50-60 100 0t-80 50 60-20"/><path d="M90 120q40-40 90 10t-70 45"/></g><circle cx="110" cy="125" r="15" fill="#e4572e"/><circle cx="160" cy="150" r="14" fill="#f08a52"/><circle cx="135" cy="170" r="11" fill="#e4572e"/><circle cx="175" cy="115" r="8" fill="#4f9a4a"/><circle cx="95" cy="160" r="7" fill="#4f9a4a"/>`,
+ pho:`<circle cx="130" cy="130" r="82" fill="#8a5a2b"/><circle cx="130" cy="130" r="72" fill="#c98e45"/><g stroke="#f6efe0" stroke-width="6" fill="none" stroke-linecap="round"><path d="M85 130q45-35 90 0M85 145q45-30 90 0M95 160q35-22 70 0"/></g><g fill="#b83a32"><ellipse cx="110" cy="115" rx="20" ry="9"/><ellipse cx="150" cy="125" rx="20" ry="9"/><ellipse cx="130" cy="150" rx="18" ry="8"/></g><g fill="#4f9a4a"><circle cx="168" cy="150" r="5"/><circle cx="95" cy="150" r="5"/><circle cx="140" cy="100" r="5"/></g>`,
+ buncha:`<ellipse cx="95" cy="125" rx="42" ry="36" fill="#f7f1e2" stroke="#e2d8c2" stroke-width="3"/><g stroke="#e2d8c2" stroke-width="3"><path d="M65 115h60M62 130h66M70 145h50"/></g><circle cx="175" cy="135" r="38" fill="#a85a22"/><circle cx="160" cy="125" r="12" fill="#7a3c16"/><circle cx="188" cy="140" r="13" fill="#7a3c16"/><circle cx="168" cy="152" r="11" fill="#7a3c16"/><g fill="#4f9a4a"><ellipse cx="120" cy="180" rx="22" ry="9" transform="rotate(-15 120 180)"/><ellipse cx="150" cy="195" rx="20" ry="8" transform="rotate(10 150 195)"/></g>`,
+ banhxeo:`<path d="M65 150a65 65 0 0 1 130 0z" fill="#f1c552"/><path d="M65 150a65 65 0 0 1 130 0z" fill="none" stroke="#d8a030" stroke-width="4"/><circle cx="110" cy="128" r="7" fill="#f4a58a"/><circle cx="140" cy="118" r="7" fill="#f4a58a"/><circle cx="165" cy="135" r="6" fill="#f4a58a"/><g fill="#4f9a4a"><ellipse cx="90" cy="185" rx="24" ry="11"/><ellipse cx="140" cy="195" rx="24" ry="11" transform="rotate(-8 140 195)"/><ellipse cx="185" cy="182" rx="20" ry="10"/></g>`,
+ shrimp:`<g fill="#f08a52" stroke="#c8562a" stroke-width="3"><path d="M70 120q30-55 85-25 25 15 5 45-15-22-45-18-25 3-45 0z"/><path d="M85 170q30-45 80-15 22 14 5 40-14-18-40-14-25 2-45-11z"/></g><g fill="#f4dc7c"><circle cx="175" cy="125" r="6"/><circle cx="70" cy="150" r="6"/><circle cx="185" cy="180" r="5"/></g><g fill="#4f9a4a"><circle cx="120" cy="135" r="4"/><circle cx="150" cy="160" r="4"/><circle cx="100" cy="195" r="4"/></g>`,
+ soup:`<circle cx="130" cy="130" r="82" fill="#e08a2a"/><circle cx="130" cy="130" r="70" fill="#f1a845"/><path d="M100 125q30-35 60 0t-60 25 50-5" stroke="#fff6e4" stroke-width="8" fill="none" stroke-linecap="round"/><g fill="#5a7a2a"><circle cx="90" cy="150" r="4"/><circle cx="165" cy="110" r="4"/><circle cx="170" cy="160" r="4"/></g>`,
+ pizza:`<circle cx="130" cy="130" r="88" fill="#d9a44a"/><circle cx="130" cy="130" r="74" fill="#e8573a"/><g fill="#fff6dc"><circle cx="105" cy="110" r="17"/><circle cx="155" cy="125" r="17"/><circle cx="120" cy="160" r="16"/><circle cx="165" cy="165" r="11"/></g><g fill="#3e8a3a"><ellipse cx="108" cy="112" rx="9" ry="5"/><ellipse cx="158" cy="128" rx="9" ry="5"/><ellipse cx="122" cy="162" rx="8" ry="5"/></g>`,
+ tiramisu:`<rect x="65" y="85" width="130" height="90" rx="10" fill="#f1e2c0"/><rect x="65" y="110" width="130" height="14" fill="#8a5a3a"/><rect x="65" y="142" width="130" height="14" fill="#8a5a3a"/><rect x="65" y="85" width="130" height="22" rx="10" fill="#5a3a24"/><g fill="#3a2416"><circle cx="95" cy="96" r="2"/><circle cx="130" cy="92" r="2"/><circle cx="165" cy="98" r="2"/></g><circle cx="195" cy="195" r="14" fill="#c8423a"/><path d="M195 181v-10" stroke="#4f9a4a" stroke-width="4"/>`,
+ salad:`<g>${[[100,110,"#f2b632"],[140,95,"#f5c64a"],[170,130,"#f2b632"],[120,150,"#e8a21f"]].map(([x,y,c])=>`<rect x="${x}" y="${y}" width="28" height="28" rx="6" fill="${c}"/>`).join("")}</g><g stroke="#4f9a4a" stroke-width="8" stroke-linecap="round"><path d="M80 170l30 30M150 175l-20 35M180 170l25 25M95 95l-10-20"/></g><circle cx="190" cy="105" r="9" fill="#e5d3a1"/><circle cx="85" cy="135" r="9" fill="#e5d3a1"/>`
+};
+const svgDraw=f=>`<svg viewBox="0 0 260 260"><defs><radialGradient id="g${f}" cx=".4" cy=".35"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#e4ded2"/></radialGradient></defs><circle cx="130" cy="130" r="128" fill="url(#g${f})"/><circle cx="130" cy="130" r="98" fill="none" stroke="#d6cfc1" stroke-width="2"/>${foods[f]}</svg>`;
+const svg=f=>`<img src="img/food/${f}.webp" alt="" draggable="false" style="width:100%;height:100%;object-fit:contain;display:block" onerror="this.outerHTML=svgDraw('${f}')">`;
+const $=id=>document.getElementById(id);
+let cur=2,busy=false;
+const cards=$("cards"),pick=$("pick");
+dishes.forEach((d,i)=>{const c=document.createElement("div");c.className="card";c.innerHTML=`<div class="mini">${svg(d.f)}</div><div><b class="serif">${d.n}</b><small>${d.p}</small></div>`;c.onclick=()=>go(i);cards.appendChild(c);
+ $("dots").appendChild(document.createElement("i"))});
+const fill=d=>{$("eyebrow").textContent=d.e;$("name").textContent=d.n;$("desc").textContent=d.d;$("price").textContent=d.p;$("chips").textContent=d.c.join("  |  ")};
+const texts=["eyebrow","name","desc","price","chips"].map($);
+function place(){const c=cards.children[cur+1];const pg=Math.floor(cur/4),pages=Math.ceil(dishes.length/4);
+ cards.style.transform=`translateX(${-pg*(cards.offsetWidth+14)}px)`;
+ pick.style.width=c.offsetWidth+"px";pick.style.transform=`translateX(${c.offsetLeft}px)`;
+ [...$("dots").children].forEach((x,i)=>x.classList.toggle("on",i===cur));$("page").textContent=`TRANG ${String(pg+1).padStart(2,"0")} / ${String(pages).padStart(2,"0")}`}
+async function go(i,o={}){
+ i=(i+dishes.length)%dishes.length;if(i===cur||(busy&&!o.force))return;busy=true;
+ const k=o.fast?.38:1,dir=o.dir||(i>cur?1:-1),old=$("plate"),nw=document.createElement("div");nw.className="plate";nw.innerHTML=svg(dishes[i].f);old.after(nw);
+ old.id="";nw.id="plate";cur=i;place();
+ const ease="cubic-bezier(.34,1.45,.55,1)";
+ old.animate([{transform:"none",opacity:1},{transform:`translateX(${-dir*260}px) translateY(-40px) rotate(${-dir*140}deg) scale(.7)`,opacity:0}],{duration:520*k,easing:"cubic-bezier(.5,0,.8,.4)",fill:"forwards"}).onfinish=()=>old.remove();
+ nw.animate([{transform:`translateX(${dir*260}px) translateY(-70px) rotate(${dir*160}deg) scale(.6)`,opacity:0},{transform:"translateY(-18px) rotate(0) scale(1.06)",opacity:1,offset:.7},{transform:"none",opacity:1}],{duration:900*k,delay:o.fast?0:180,easing:ease,fill:"both"}).onfinish=()=>{if(!o.force||o.last)busy=false};
+ if(o.fast){fill(dishes[i]);return}
+ texts.forEach((t,k)=>{t.animate([{opacity:1,transform:"none"},{opacity:0,transform:`translateY(-10px)`}],{duration:200,delay:k*30,fill:"forwards"}).onfinish=()=>{fill(dishes[i]);t.animate([{opacity:0,transform:"translateY(14px)"},{opacity:1,transform:"none"}],{duration:450,easing:"cubic-bezier(.2,.8,.2,1)",fill:"both"})}});
+}
+let spinning=false;
+async function spin(){
+ if(spinning||busy)return;spinning=true;busy=true;const btn=$("rnd");btn.classList.add("spin");btn.disabled=true;
+ let target;do{target=Math.floor(Math.random()*dishes.length)}while(target===cur);
+ const steps=dishes.length+((target-cur+dishes.length)%dishes.length);
+ let idx=cur;
+ for(let n=1;n<=steps;n++){
+  idx=(idx+1)%dishes.length;const last=n===steps;
+  await go(idx,{fast:!last,force:true,last,dir:1});
+  if(last)break;
+  await new Promise(r=>setTimeout(r,110+Math.pow(n/steps,3)*480));
+ }
+ btn.classList.remove("spin");btn.disabled=false;spinning=false;
+ const c=cards.children[cur+1];c.classList.remove("flash");void c.offsetWidth;c.classList.add("flash");
+}
+$("plate").innerHTML=svg(dishes[cur].f);fill(dishes[cur]);
+$("rnd").onclick=spin;$("prev").onclick=()=>go(cur-1);$("next").onclick=()=>go(cur+1);
+addEventListener("keydown",e=>{if(e.key==="ArrowRight")go(cur+1);if(e.key==="ArrowLeft")go(cur-1)});
+addEventListener("resize",place);document.fonts.ready.then(place);place();
+</script></body></html>
