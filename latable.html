@@ -14,7 +14,7 @@ main{position:relative;height:430px;max-width:1100px;margin:0 auto}
 .arc{position:absolute;left:50%;top:0;width:min(820px,54vw);height:min(410px,27vw);margin-left:calc(min(820px,54vw)/-2);border-radius:0 0 999px 999px;
  background:radial-gradient(ellipse at 50% 35%,rgba(255,220,170,.10),rgba(0,0,0,.35) 100%),url(img/food/ban.webp) center/cover #4b2f20;box-shadow:0 18px 40px rgba(60,35,20,.28);overflow:hidden}
 
-.stage{position:absolute;left:50%;top:26px;width:300px;height:300px;margin-left:-150px;perspective:900px}
+:root{--ps:300px;--per:4}.stage{position:absolute;left:50%;top:26px;width:var(--ps);height:var(--ps);margin-left:calc(var(--ps)/-2);perspective:900px}
 .shadow{position:absolute;left:8%;right:8%;bottom:-6px;height:26px;border-radius:50%;background:radial-gradient(rgba(0,0,0,.45),transparent 70%);filter:blur(6px)}
 .plate{position:absolute;inset:0;will-change:transform,opacity}
 .plate svg,.plate img{width:100%;height:100%;display:block;filter:drop-shadow(0 10px 14px rgba(0,0,0,.35))}
@@ -33,7 +33,7 @@ main{position:relative;height:430px;max-width:1100px;margin:0 auto}
 .list{max-width:880px;margin:34px auto 0;position:relative;padding:0 10px}
 .q{display:flex;justify-content:space-between;font-size:9px;letter-spacing:.1em;color:var(--mut);margin-bottom:8px}
 .win{overflow:hidden;padding:4px 2px 14px;margin:-4px -2px 0}.cards{display:flex;gap:14px;position:relative;transition:transform .7s cubic-bezier(.3,.9,.3,1)}
-.card{flex:0 0 calc((100% - 42px)/4);min-width:0;display:flex;gap:12px;align-items:center;padding:12px;border:1px solid #e3dccf;border-radius:3px;background:#f9f6ef;cursor:pointer;position:relative;z-index:1;transition:transform .3s}
+.card{flex:0 0 calc((100% - (var(--per) - 1)*14px)/var(--per));min-width:0;display:flex;gap:12px;align-items:center;padding:12px;border:1px solid #e3dccf;border-radius:3px;background:#f9f6ef;cursor:pointer;position:relative;z-index:1;transition:transform .3s}
 .card:hover{transform:translateY(-3px)}
 .card .mini{width:46px;height:46px;flex:none}.card b{font-weight:400;font-size:13px;display:block}.card small{font-size:9px;color:var(--mut)}
 .pick{position:absolute;top:0;left:0;height:100%;border:1px solid #cfc4ae;background:var(--sel);border-radius:3px;box-shadow:0 6px 16px rgba(0,0,0,.1);transition:transform .6s cubic-bezier(.34,1.56,.64,1);z-index:0}
@@ -42,6 +42,23 @@ main{position:relative;height:430px;max-width:1100px;margin:0 auto}
 .nav{position:absolute;top:50%;width:30px;height:30px;border-radius:50%;border:1px solid #cfc4ae;background:transparent;cursor:pointer;transform:translateY(-10%)}
 .nav.l{left:-34px}.nav.r{right:-34px}
 .dots{display:flex;gap:8px;justify-content:center;margin-top:14px}.dots i{width:6px;height:2px;background:#cfc4ae;transition:.4s}.dots i.on{width:18px;background:#b08a4a}
+@media(max-width:720px){
+ :root{--ps:min(300px,74vw);--per:2}
+ header{padding:14px 18px}.tag{display:none}header div:last-child{display:none}.logo{font-size:15px}
+ main{height:calc(var(--ps) + 54px)}
+ .arc{left:3%;margin-left:0;width:94%;height:calc(var(--ps) * .72)}
+ .stage{top:24px}
+ .side-l,.side-r{display:none}
+ .info h1{font-size:34px;margin:10px 0 6px;padding:0 14px}.desc{padding:0 22px;line-height:1.5}
+ .eyebrow{font-size:8px;padding:0 14px}
+ .meta{gap:14px;margin:16px 0 8px}.price{font-size:18px}
+ .list{margin-top:22px;padding:0 14px}
+ .q{flex-direction:column;align-items:stretch;gap:10px}.q>div:last-child{justify-content:space-between}
+ .rnd{padding:11px 18px;font-size:11px;margin-right:0;flex:1;text-align:center}.q #page{margin-left:12px;white-space:nowrap}
+ .card{padding:10px;gap:9px}.card .mini{width:40px;height:40px}.card b{font-size:12px}
+ .nav{display:none}
+ .dots{flex-wrap:wrap}
+}
 </style></head><body>
 <header><div class="logo serif">LA TABLE<small>RESTAURANT</small></div><div class="tag">— MỘT VÒNG VỊ NGON —</div><div style="width:90px"></div></header>
 <main>
@@ -101,8 +118,8 @@ dishes.forEach((d,i)=>{const c=document.createElement("div");c.className="card";
  $("dots").appendChild(document.createElement("i"))});
 const fill=d=>{$("eyebrow").textContent=d.e;$("name").textContent=d.n;$("desc").textContent=d.d;$("price").textContent=d.p;$("chips").textContent=d.c.join("  |  ")};
 const texts=["eyebrow","name","desc","price","chips"].map($);
-function place(){const c=cards.children[cur+1];const pg=Math.floor(cur/4),pages=Math.ceil(dishes.length/4);
- cards.style.transform=`translateX(${-pg*(cards.offsetWidth+14)}px)`;
+function place(){const c=cards.children[cur+1];const per=+getComputedStyle(document.documentElement).getPropertyValue('--per')||4,pg=Math.floor(cur/per),pages=Math.ceil(dishes.length/per);
+ cards.style.transform=`translateX(${-Math.min(pg*per,dishes.length-per)*(cards.children[1].offsetWidth+14)}px)`;
  pick.style.width=c.offsetWidth+"px";pick.style.transform=`translateX(${c.offsetLeft}px)`;
  [...$("dots").children].forEach((x,i)=>x.classList.toggle("on",i===cur));$("page").textContent=`TRANG ${String(pg+1).padStart(2,"0")} / ${String(pages).padStart(2,"0")}`}
 async function go(i,o={}){
@@ -131,7 +148,9 @@ async function spin(){
  const c=cards.children[cur+1];c.classList.remove("flash");void c.offsetWidth;c.classList.add("flash");
 }
 $("plate").innerHTML=svg(dishes[cur].f);fill(dishes[cur]);
-$("rnd").onclick=spin;$("prev").onclick=()=>go(cur-1);$("next").onclick=()=>go(cur+1);
+$("rnd").onclick=spin;
+{let x0=null;const st=document.querySelector(".stage");st.addEventListener("touchstart",e=>{x0=e.touches[0].clientX},{passive:true});st.addEventListener("touchend",e=>{if(x0==null)return;const dx=e.changedTouches[0].clientX-x0;x0=null;if(Math.abs(dx)>40)go(cur+(dx<0?1:-1))})}
+$("prev").onclick=()=>go(cur-1);$("next").onclick=()=>go(cur+1);
 addEventListener("keydown",e=>{if(e.key==="ArrowRight")go(cur+1);if(e.key==="ArrowLeft")go(cur-1)});
 addEventListener("resize",place);document.fonts.ready.then(place);place();
 </script></body></html>
