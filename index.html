@@ -401,7 +401,7 @@ const donateOn = () => window.SHOW_DONATE !== false;   // config.js: SHOW_DONATE
 function render() {
   if (game === 'donate' && !donateOn()) game = 'masoi';
   if (game === 'ngu' && !nguOn()) game = 'masoi';
-  if (game === 'menu') return $app.innerHTML = shell('<iframe src="latable.html?v=20261123c" title="LA TABLE" style="width:100%;height:calc(100vh - 24px);min-height:640px;border:0;border-radius:12px;background:#f6f2ea"></iframe>');
+  if (game === 'menu') return $app.innerHTML = shell('<iframe src="latable.html?v=20261124a" title="LA TABLE" style="width:100%;height:calc(100vh - 24px);min-height:640px;border:0;border-radius:12px;background:#f6f2ea"></iframe>');
   if (game === 'donate') return $app.innerHTML = shell(donateHTML());
   if (game === 'gchat') return gchatRender();
   if (game === 'ngu') return nguRender();
