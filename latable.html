@@ -10,14 +10,9 @@ body{background:var(--cream);color:var(--ink);font-family:"Helvetica Neue",Arial
 header{display:flex;justify-content:space-between;align-items:center;padding:22px 48px}
 .logo{letter-spacing:.2em;font-size:18px}.logo small{display:block;font-size:8px;letter-spacing:.35em;color:var(--mut)}
 .tag{font-size:10px;letter-spacing:.3em;color:var(--mut)}
-main{position:relative;height:430px;max-width:1100px;margin:0 auto}
-.arc{position:absolute;left:50%;top:0;width:min(820px,54vw);height:min(410px,27vw);margin-left:calc(min(820px,54vw)/-2);border-radius:0 0 999px 999px;
- background:radial-gradient(ellipse at 50% 35%,rgba(255,220,170,.10),rgba(0,0,0,.35) 100%),url(img/food/ban.webp) center/cover #4b2f20;box-shadow:0 18px 40px rgba(60,35,20,.28);overflow:hidden}
 
-:root{--ps:300px;--per:4}.stage{position:absolute;left:50%;top:26px;width:var(--ps);height:var(--ps);margin-left:calc(var(--ps)/-2);perspective:900px}
-.shadow{position:absolute;left:8%;right:8%;bottom:-6px;height:26px;border-radius:50%;background:radial-gradient(rgba(0,0,0,.45),transparent 70%);filter:blur(6px)}
-.plate{position:absolute;inset:0;will-change:transform,opacity}
-.plate svg,.plate img{width:100%;height:100%;display:block;filter:drop-shadow(0 10px 14px rgba(0,0,0,.35))}
+
+:root{--ps:300px;--per:4}
 .side-l{position:absolute;left:4%;top:170px}
 .side-l h3{font-weight:400;font-size:24px;line-height:1.5}
 .side-l p{margin-top:14px;font-size:8px;letter-spacing:.2em;color:var(--mut);line-height:1.8}
@@ -45,9 +40,6 @@ main{position:relative;height:430px;max-width:1100px;margin:0 auto}
 @media(max-width:720px){
  :root{--ps:min(300px,74vw);--per:2}
  header{padding:14px 18px}.tag{display:none}header div:last-child{display:none}.logo{font-size:15px}
- main{height:calc(var(--ps) + 54px)}
- .arc{left:3%;margin-left:0;width:94%;height:calc(var(--ps) * .72)}
- .stage{top:24px}
  .side-l,.side-r{display:none}
  .info h1{font-size:34px;margin:10px 0 6px;padding:0 14px}.desc{padding:0 22px;line-height:1.5}
  .eyebrow{font-size:8px;padding:0 14px}
@@ -59,13 +51,22 @@ main{position:relative;height:430px;max-width:1100px;margin:0 auto}
  .nav{display:none}
  .dots{flex-wrap:wrap}
 }
+
+main{position:relative;max-width:1100px;margin:0 auto}
+.turn{position:relative;height:calc(var(--ps)*1.18);overflow:hidden;cursor:grab;touch-action:pan-y;-webkit-mask-image:linear-gradient(#000 82%,transparent);mask-image:linear-gradient(#000 82%,transparent)}
+.turn:active{cursor:grabbing}
+.disc{--R:calc(var(--ps)*2.15);--phi:0;position:absolute;left:50%;width:calc((var(--R) + var(--ps)*.78)*2);height:calc((var(--R) + var(--ps)*.78)*2);margin-left:calc((var(--R) + var(--ps)*.78)*-1);top:calc(var(--ps)*.5 + 26px - var(--R) - var(--ps)*.78 + var(--R));border-radius:50%;transform:rotate(calc(var(--phi)*1deg));will-change:transform;
+ background:radial-gradient(circle,rgba(0,0,0,.55) 0,rgba(0,0,0,0) 22%),url(img/food/ban.webp) center/1400px auto,#4b2f20;box-shadow:inset 0 0 0 3px rgba(255,225,170,.12),0 20px 50px rgba(60,35,20,.35)}
+.disc:before{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 50% 12%,rgba(255,220,170,.14),transparent 45%)}
+.slot{position:absolute;left:50%;top:50%;width:0;height:0;transform:rotate(calc(var(--th)*1deg)) translateY(calc(var(--R)*-1))}
+.pl{position:absolute;left:calc(var(--ps)/-2);top:calc(var(--ps)/-2);width:var(--ps);height:var(--ps);transform:rotate(calc((var(--th) + var(--phi))*-1deg));transition:filter .5s,opacity .5s}
+.pl img,.pl svg{width:100%;height:100%;display:block;filter:drop-shadow(0 12px 14px rgba(0,0,0,.45));pointer-events:none;-webkit-user-drag:none}
+.pl.dim{filter:brightness(.62) saturate(.8);opacity:.9}
+.hint{position:absolute;left:0;right:0;bottom:8px;text-align:center;font-size:9px;letter-spacing:.2em;color:var(--mut)}
 </style></head><body>
 <header><div class="logo serif">LA TABLE<small>RESTAURANT</small></div><div class="tag">— MỘT VÒNG VỊ NGON —</div><div style="width:90px"></div></header>
 <main>
- <div class="arc"></div>
- <div class="side-l serif"><h3>Ngon từ<br>điều giản dị.</h3><p>NGUYÊN LIỆU TƯƠI<br>HƯƠNG VỊ TRỌN VẸN</p></div>
- <div class="side-r">↻<span>Bấm vào bàn.<br>Khám phá món ăn.</span></div>
- <div class="stage"><div class="shadow"></div><div class="plate" id="plate"></div></div>
+ <div class="turn" id="turn"><div class="disc" id="disc"></div></div>
 </main>
 <section class="info">
  <div class="eyebrow"><span class="t" id="eyebrow"></span></div>
@@ -122,34 +123,44 @@ function place(){const c=cards.children[cur+1];const per=+getComputedStyle(docum
  cards.style.transform=`translateX(${-Math.min(pg*per,dishes.length-per)*(cards.children[1].offsetWidth+14)}px)`;
  pick.style.width=c.offsetWidth+"px";pick.style.transform=`translateX(${c.offsetLeft}px)`;
  [...$("dots").children].forEach((x,i)=>x.classList.toggle("on",i===cur));$("page").textContent=`TRANG ${String(pg+1).padStart(2,"0")} / ${String(pages).padStart(2,"0")}`}
-async function go(i,o={}){
- i=(i+dishes.length)%dishes.length;if(i===cur||(busy&&!o.force))return;busy=true;
- const k=o.fast?.38:1,dir=o.dir||(i>cur?1:-1),old=$("plate"),nw=document.createElement("div");nw.className="plate";nw.innerHTML=svg(dishes[i].f);old.after(nw);
- old.id="";nw.id="plate";cur=i;place();
- const ease="cubic-bezier(.34,1.45,.55,1)";
- old.animate([{transform:"none",opacity:1},{transform:`translateX(${-dir*260}px) translateY(-40px) rotate(${-dir*140}deg) scale(.7)`,opacity:0}],{duration:520*k,easing:"cubic-bezier(.5,0,.8,.4)",fill:"forwards"}).onfinish=()=>old.remove();
- nw.animate([{transform:`translateX(${dir*260}px) translateY(-70px) rotate(${dir*160}deg) scale(.6)`,opacity:0},{transform:"translateY(-18px) rotate(0) scale(1.06)",opacity:1,offset:.7},{transform:"none",opacity:1}],{duration:900*k,delay:o.fast?0:180,easing:ease,fill:"both"}).onfinish=()=>{if(!o.force||o.last)busy=false};
- if(o.fast){fill(dishes[i]);return}
- texts.forEach((t,k)=>{t.animate([{opacity:1,transform:"none"},{opacity:0,transform:`translateY(-10px)`}],{duration:200,delay:k*30,fill:"forwards"}).onfinish=()=>{fill(dishes[i]);t.animate([{opacity:0,transform:"translateY(14px)"},{opacity:1,transform:"none"}],{duration:450,easing:"cubic-bezier(.2,.8,.2,1)",fill:"both"})}});
-}
+const N=dishes.length,STEP=360/N,disc=$("disc"),turn=$("turn");
+let phi=-cur*STEP;
+dishes.forEach((d,i)=>{const sl=document.createElement("div");sl.className="slot";sl.style.setProperty("--th",i*STEP);
+ sl.innerHTML=`<div class="pl" style="--th:${i*STEP}">${svg(d.f)}</div>`;disc.appendChild(sl)});
+const pls=[...disc.querySelectorAll(".pl")];
+const setPhi=v=>{phi=v;disc.style.setProperty("--phi",v)};
+const near=v=>(((Math.round(-v/STEP))%N)+N)%N;
+function mark(i){pls.forEach((p,k)=>p.classList.toggle("dim",k!==i))}
+function tween(to,dur,ease,onf){return new Promise(res=>{const from=phi,t0=performance.now();
+ (function f(t){const u=Math.min(1,(t-t0)/dur);setPhi(from+(to-from)*ease(u));onf&&onf();if(u<1)requestAnimationFrame(f);else res()})(t0)})}
+const eBack=u=>{const c1=1.15,c3=c1+1;return 1+c3*Math.pow(u-1,3)+c1*Math.pow(u-1,2)};
+const eOut=u=>1-Math.pow(1-u,3.4);
+function swapText(i){texts.forEach((t,k)=>{t.animate([{opacity:1,transform:"none"},{opacity:0,transform:"translateY(-10px)"}],{duration:200,delay:k*30,fill:"forwards"}).onfinish=()=>{fill(dishes[i]);t.animate([{opacity:0,transform:"translateY(14px)"},{opacity:1,transform:"none"}],{duration:450,easing:"cubic-bezier(.2,.8,.2,1)",fill:"both"})}})}
+function targetPhi(i){let d=(-i*STEP-phi)%360;if(d>180)d-=360;if(d<-180)d+=360;return phi+d}
+async function go(i){
+ i=(i+N)%N;if(i===cur||busy)return;busy=true;cur=i;mark(i);place();swapText(i);
+ await tween(targetPhi(i),1100,eBack);busy=false}
 let spinning=false;
 async function spin(){
  if(spinning||busy)return;spinning=true;busy=true;const btn=$("rnd");btn.classList.add("spin");btn.disabled=true;
- let target;do{target=Math.floor(Math.random()*dishes.length)}while(target===cur);
- const steps=dishes.length+((target-cur+dishes.length)%dishes.length);
- let idx=cur;
- for(let n=1;n<=steps;n++){
-  idx=(idx+1)%dishes.length;const last=n===steps;
-  await go(idx,{fast:!last,force:true,last,dir:1});
-  if(last)break;
-  await new Promise(r=>setTimeout(r,110+Math.pow(n/steps,3)*480));
- }
- btn.classList.remove("spin");btn.disabled=false;spinning=false;
+ let target;do{target=Math.floor(Math.random()*N)}while(target===cur);
+ const dirn=Math.random()<.5?1:-1,extra=360*(2+Math.floor(Math.random()*2))*dirn;
+ let to=targetPhi(target);to+=extra;
+ let last=cur;
+ await tween(to,3800,eOut,()=>{const k=near(phi);if(k!==last){last=k;cur=k;mark(k);fill(dishes[k]);place()}});
+ cur=target;mark(cur);fill(dishes[cur]);place();
+ btn.classList.remove("spin");btn.disabled=false;spinning=false;busy=false;
  const c=cards.children[cur+1];c.classList.remove("flash");void c.offsetWidth;c.classList.add("flash");
 }
-$("plate").innerHTML=svg(dishes[cur].f);fill(dishes[cur]);
+setPhi(-cur*STEP);mark(cur);fill(dishes[cur]);
 $("rnd").onclick=spin;
-{let x0=null;const st=document.querySelector(".stage");st.addEventListener("touchstart",e=>{x0=e.touches[0].clientX},{passive:true});st.addEventListener("touchend",e=>{if(x0==null)return;const dx=e.changedTouches[0].clientX-x0;x0=null;if(Math.abs(dx)>40)go(cur+(dx<0?1:-1))})}
+{let x0=null,p0=0,moved=false;const st=turn;
+ const down=x=>{if(busy)return;x0=x;p0=phi;moved=false};
+ const mv=x=>{if(x0==null)return;const dx=x-x0;if(Math.abs(dx)>6)moved=true;if(moved)setPhi(p0+dx*.18)};
+ const up=x=>{if(x0==null)return;const dx=x-x0;x0=null;if(!moved)return;const i=near(phi);
+  if(Math.abs(dx)>40&&i===cur){busy=false;go(cur+(dx<0?1:-1))}else{cur=i;busy=true;mark(i);place();swapText(i);tween(targetPhi(i),500,eBack).then(()=>busy=false)}};
+ st.addEventListener("touchstart",e=>down(e.touches[0].clientX),{passive:true});st.addEventListener("touchmove",e=>mv(e.touches[0].clientX),{passive:true});st.addEventListener("touchend",e=>up(e.changedTouches[0].clientX));
+ st.addEventListener("mousedown",e=>down(e.clientX));addEventListener("mousemove",e=>mv(e.clientX));addEventListener("mouseup",e=>up(e.clientX))}
 $("prev").onclick=()=>go(cur-1);$("next").onclick=()=>go(cur+1);
 addEventListener("keydown",e=>{if(e.key==="ArrowRight")go(cur+1);if(e.key==="ArrowLeft")go(cur-1)});
 addEventListener("resize",place);document.fonts.ready.then(place);place();
