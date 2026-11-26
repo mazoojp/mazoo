@@ -151,6 +151,7 @@
   .msg.bub.mine{align-items:flex-end} .msg.bub.mine .tx{border-radius:14px 14px 4px 14px}   /* tin của mình vẫn nền trắng như của người khác, chỉ nằm bên phải */
   .rrow{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid #eceef2;border-radius:12px;margin-top:8px;flex-wrap:wrap} .rrow .rc{font-weight:800;font-size:18px;min-width:56px;color:var(--pri-text)} .rrow .ri{flex:1;min-width:160px;font-size:14px} .rrow .ri .note{font-size:12px}
   /* đồng hồ đếm ngược: giữ chỗ cố định và số cùng bề rộng để các dòng bên dưới không trồi lên thụt xuống mỗi giây */
+  .updnote{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:8px;padding:5px 12px;font-size:13px;text-align:center;margin-bottom:10px}   /* dòng cam nhắc tải lại: nhỏ, nhạt, không nổi bật */
   #fillhint{min-height:2.8em;font-variant-numeric:tabular-nums} #cd{min-width:78px;justify-content:center;font-variant-numeric:tabular-nums}
   .cols.chat2{grid-template-columns:minmax(0,5fr) minmax(0,7fr)} .cols.chat2>.stack:last-child{align-self:stretch}
   .chatpair{display:grid;grid-template-columns:repeat(var(--n,2),minmax(0,1fr));gap:12px;align-items:start;position:sticky;top:68px}
@@ -202,7 +203,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126au';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126av';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -515,7 +516,7 @@ const ic = (n, extra = '') => `<svg class="ic" viewBox="0 0 24 24" ${extra}>${IC
 let sideOpen = false;
 function shell(inner) {
   const caro = game === 'caro', cx = caro ? (cme || auth) : me, inRoom = caro ? !!(cme && C) : !!(me && S);
-  const notices = (newVer ? '<div class="banner">Có bản mới của trang. Hết ván hãy tải lại trang (Cmd+Shift+R) để dùng bản mới.</div>' : '') + (B.mode === 'local' ? '<div class="banner">Chế độ thử: chỉ chơi được giữa các tab cùng một trình duyệt. Điền <b>config.js</b> (Firebase) để chơi online.</div>' : '')
+  const notices = (newVer ? UPD_NOTE : '') + (B.mode === 'local' ? '<div class="banner">Chế độ thử: chỉ chơi được giữa các tab cùng một trình duyệt. Điền <b>config.js</b> (Firebase) để chơi online.</div>' : '')
     + (caro ? '' : '<div class="banner" id="botwarn" style="display:none">Bot quản trò không chạy nên chủ phòng đang chạy luật thay. Nếu chủ phòng thoát hoặc mất mạng, ván sẽ dừng.</div>');
   const it = (act, icon, label, on = false) => `<button class="it ${on ? 'on' : ''}" data-act="${act}" title="${label}">${ic(icon)}<span>${label}</span></button>`;
   const gt = (g, icon, label) => `<button class="it ${game === g ? 'on' : ''}" data-act="go" data-game="${g}" title="${label}">${ic(icon)}<span>${label}</span></button>`;
@@ -1720,13 +1721,14 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261126au';
+const APP_V = '20261126av';
+const UPD_NOTE = '<div id="updnote" class="updnote">🔔 Có bản cập nhật mới. Bấm F5 (hoặc Ctrl + Shift + R) để tải lại trang nhé.</div>';
 async function checkNewVersion() {
   try {
     const t = await (await fetch(location.pathname + '?_v=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/const APP_V = '([^']+)'/);
-    if (!m || m[1] === APP_V) return;
-    const busy = me && !me.spec && S && S.phase !== 'lobby' && S.phase !== 'end';   // đang giữa ván thì không tự tải lại, chỉ báo
-    if (busy) { newVer = true; render(); } else location.reload();
+    if (!m || m[1] === APP_V || newVer) return;
+    newVer = true;   // chỉ nhắc, không tự tải lại (tránh làm gián đoạn ván); thêm thẳng dòng nhắc vào trang, không vẽ lại cả trang
+    const pg = document.querySelector('.page'); if (pg && !document.getElementById('updnote')) pg.insertAdjacentHTML('afterbegin', UPD_NOTE);
   } catch (e) {}
 }
 let newVer = false;
@@ -1740,7 +1742,7 @@ homeName = store().getItem('masoi_name') || '';
 const qRoom = new URLSearchParams(location.search).get('room');
 if (qRoom) homeCode = qRoom.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
 me = JSON.parse(store().getItem('masoi_me') || 'null');
-window.__masoi = { B, get S() { return S; }, get me() { return me; }, get C() { return C; }, get cme() { return cme; }, setBeat(v) { botBeat = v; beatLoaded = true; } };  // dùng khi gỡ lỗi
+window.__masoi = { checkNewVersion, B, get S() { return S; }, get me() { return me; }, get C() { return C; }, get cme() { return cme; }, setBeat(v) { botBeat = v; beatLoaded = true; } };  // dùng khi gỡ lỗi
 await resumeAuth();
 cme = JSON.parse(store().getItem('caro_me') || 'null');
 if (cme && !auth) { store().removeItem('caro_me'); cme = null; }   // chưa đăng nhập thì không tự vào phòng
