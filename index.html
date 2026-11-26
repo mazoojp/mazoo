@@ -194,7 +194,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126y';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126z';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -327,22 +327,15 @@ const canSwitch = () => !!S && (S.phase === 'lobby' || S.phase === 'end');
 async function toSpectator() {
   if (!me || me.spec || !canSwitch()) return;
   if (S.allowSpec === false) return flash('Chủ phòng đã tắt Khán đài nên bạn chưa xuống xem được.');
-  const rest = Object.entries(S.players || {}).filter(([id, p]) => id !== me.pid && !p.bot).sort((a, b) => (a[1].t || 0) - (b[1].t || 0));
-  if (!rest.length) return flash('Bạn là người chơi thật duy nhất trong phòng nên chưa xuống khán đài được.');
-  const code = me.code, pid = me.pid, name = me.name, u = { ['rooms/' + code + '/players/' + pid]: null, ['rooms/' + code + '/seen/' + pid]: null, ['rooms/' + code + '/ready/' + pid]: null, ['rooms/' + code + '/spectators/' + pid]: { name, t: tnow() } };
-  if (S.host === pid) u['rooms/' + code + '/host'] = rest[0][0];   // chủ phòng xuống thì nhường cho người thật kế tiếp
-  me = { pid, name, code, spec: true, why: 'self' };   // đặt trước khi ghi: không thì máy tưởng mình bị dọn nhầm và tự thêm lại vào danh sách người chơi
-  await B.update(u);
-  enter(me);
+  if (!Object.entries(S.players || {}).some(([id, p]) => id !== me.pid && !p.bot)) return flash('Bạn là người chơi thật duy nhất trong phòng nên chưa xuống khán đài được.');
+  await sendCmd('spec');   // luật (bot) xử lý: chỉ làm khi phòng còn ở phòng chờ / hết ván, nên không thể lỡ tay xóa người chơi giữa ván
 }
 async function toPlayer() {
   if (!me || !me.spec || !canSwitch()) return;
   const pl = S.players || {};
   if (Object.keys(pl).length >= MAX) return flash('Phòng đã đủ ' + MAX + ' người, chưa có chỗ trống.');
   if (Object.values(pl).some(p => p.name.trim().toLowerCase() === me.name.trim().toLowerCase())) return flash('Tên "' + me.name + '" đã có người chơi dùng. Hãy thoát và vào lại bằng tên khác.');
-  const code = me.code, pid = me.pid, name = me.name;
-  await B.update({ ['rooms/' + code + '/spectators/' + pid]: null, ['rooms/' + code + '/players/' + pid]: { name, alive: true, t: tnow() }, ['rooms/' + code + '/seen/' + pid]: tnow() });
-  enter({ pid, name, code });
+  await sendCmd('play');
 }
 function setErr(m) { homeErr = m; render(); }
 function enter(m) {
@@ -352,6 +345,8 @@ function enter(m) {
   unwatch = B.watch('rooms/' + me.code, v => {
     S = v;
     if (!S) { leaveLocal(); render(); return; }
+    if (me && !me.spec && S.spectators && S.spectators[me.pid] && !(S.players || {})[me.pid]) { me = { pid: me.pid, name: me.name, code: me.code, spec: true, why: 'self' }; store().setItem('masoi_me', JSON.stringify(me)); }   // luật đã chuyển mình xuống khán đài
+    else if (me && me.spec && (S.players || {})[me.pid]) { me = { pid: me.pid, name: me.name, code: me.code }; store().setItem('masoi_me', JSON.stringify(me)); beatSent = false; }   // lên chơi
     if (!beatSent) { beatSent = true; beat(); }
     if (!leavingNow && !me.spec && S.phase === 'lobby' && S.players && !S.players[me.pid] && me.name && Date.now() - lastReadd > 4000) {   // bị dọn nhầm (tab nền lâu): tự vào lại phòng chờ (tối đa 1 lần/4 giây để không thành vòng lặp xoá-vào-xoá)
       lastReadd = Date.now();
@@ -418,7 +413,16 @@ function runnerId() {
 let hostBusy = false;
 async function tickHost() {
   if (!me || me.spec || !S || runnerId() !== me.pid || hostBusy || !hostShouldRun()) return;
-  hostBusy = true; try { await stepRoom(B, me.code, S, tnow()); } finally { hostBusy = false; }
+  hostBusy = true;
+  try {
+    let room = S;
+    if (B.mode === 'firebase') {   // máy vừa thức dậy có thể còn giữ bản S và nhịp tim bot cũ: đọc lại trực tiếp trước khi ghi bất cứ thứ gì
+      const bb = await B.get('meta/botBeat'); if (bb) botBeat = bb;
+      if (botAlive()) return;
+      room = await B.get('rooms/' + me.code); if (!room || runnerId() !== me.pid) return;
+    }
+    await stepRoom(B, me.code, room, tnow());
+  } finally { hostBusy = false; }
 }
 setInterval(() => { tickHost(); updateClock(); }, 1000);
 function updateClock() {
