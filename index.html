@@ -190,7 +190,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126m';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126n';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -553,7 +553,7 @@ function helpHTML() {
     <li><b>Tiên tri</b>: đừng lộ vai quá sớm, Sói sẽ cắn bạn đầu tiên.</li>
     <li><b>Bảo vệ</b>: đoán xem Sói định cắn ai.</li>
     <li>Lỡ thoát giữa ván? Mở lại link, nhập <b>đúng tên cũ</b> và số phòng để vào lại (nếu mất mạng đột ngột, chờ khoảng 30 giây). Không dùng được tên của người đang chơi.</li>
-    <li>Phòng đã đủ người hoặc ván đã bắt đầu? Bạn vào <b>Khán đài</b> 👀: chỉ thấy thông tin công khai (ai còn sống, diễn biến, chat làng), không thấy vai hay hành động bí mật, và không chat được. Chủ phòng có thể bật hoặc tắt Khán đài.</li>
+    <li>Phòng đã đủ người hoặc ván đã bắt đầu? Bạn vào <b>Khán đài</b> 👀: thấy diễn biến ván và các khung chat (khung Sói chỉ hiện “Sói 1, Sói 2…”), không thấy vai hay hành động bí mật, và không chat được. Chủ phòng có thể bật hoặc tắt Khán đài.</li>
   </ul></div></div>`;
 }
 
@@ -688,7 +688,7 @@ function specHTML() {
   const why = me.why === 'full' ? `Phòng đã đủ ${MAX} người nên bạn vào Khán đài.` : me.why === 'started' ? 'Ván đã bắt đầu nên bạn vào Khán đài.' : 'Bạn đang ở Khán đài.';
   let out = `<div class="status"><span class="chip ${PH[1]}">${PH[0]}</span>${S.phase !== 'lobby' ? `<span class="chip mute">Đêm thứ ${S.round}</span>` : ''}<span class="chip" id="cd"></span><span class="chip mute">${alive.length}/${Object.keys(p).length} còn sống</span></div>`;
   out += rolesSummary() + recapHTML();
-  out += `<div class="todo">👀 ${why} Khán giả chỉ thấy thông tin công khai (ai còn sống, ai đã chết, diễn biến, chat làng), không thấy vai của người đang chơi hay hành động bí mật, và không chat được.</div>`;
+  out += `<div class="todo">👀 ${why} Khán giả thấy diễn biến ván và các khung chat (khung Sói chỉ hiện “Sói 1, Sói 2…”, không hiện tên thật), không thấy vai của người đang chơi hay hành động bí mật, và không chat được.</div>`;
   if (S.announce) out += `<div class="card ann">${esc(S.announce).replace(/\n/g, '<br>')}</div>`;
   if (S.winner) out += `<div class="card ann"><b>${esc(S.winner)}</b></div>`;
   if (S.phase === 'day') {
@@ -799,7 +799,11 @@ function chatSees(ch) {   // kênh nào mình được đọc
 const chatMsgs = ch => Object.entries(S.chat || {}).filter(([, m]) => m.c === ch).sort((a, b) => a[0] < b[0] ? -1 : 1).slice(-60);
 // Trong ván, mỗi kênh là MỘT KHUNG RIÊNG, ô nhập riêng, không bao giờ nhầm đêm/ngày:
 //   Chat làng (ban ngày) · Chat Sói (ban đêm, chỉ Sói thấy) · Chat người chết
-const msgBub = (m, chip) => `<div class="msg bub ${m.pid === me.pid ? 'mine' : ''}"><div class="who">${chip ? `<span class="chn ${m.c}">${CH_NAME[m.c] || 'Chung'}</span> ` : ''}${m.pid === me.pid ? '' : esc(m.name)}</div><div class="tx">${esc(m.text)}</div></div>`;   // tin của mình ở bên phải, của người khác bên trái
+const wolfAlias = pid => {   // khán giả không thấy tên thật của Sói: chỉ "Sói 1", "Sói 2"… (đánh số theo thứ tự vào phòng)
+  const roles = S.roles || {}, pl = S.players || {}, ws = Object.keys(roles).filter(id => roles[id] === 'wolf').sort((a, b) => ((pl[a] || {}).t || 0) - ((pl[b] || {}).t || 0)), i = ws.indexOf(pid);
+  return i >= 0 ? 'Sói ' + (i + 1) : 'Sói';
+};
+const msgBub = (m, chip) => `<div class="msg bub ${m.pid === me.pid ? 'mine' : ''}"><div class="who">${chip ? `<span class="chn ${m.c}">${CH_NAME[m.c] || 'Chung'}</span> ` : ''}${m.pid === me.pid ? '' : me.spec && m.c === 'wolf' ? wolfAlias(m.pid) : esc(m.name)}</div><div class="tx">${esc(m.text)}</div></div>`;   // tin của mình ở bên phải, của người khác bên trái
 function chatBox(ch) {
   const why = chatRule(ch), draft = chatDrafts[ch] || '';
   const T = { day: S.phase === 'end' ? ['💬 Chat chung', 'hết ván, ai cũng nói được'] : ['💬 Chat làng', 'ban ngày'], wolf: ['🐺 Chat Sói', 'ban đêm · chỉ Sói thấy'], dead: ['💀 Chat người chết', 'chỉ người chết thấy'] }[ch];
@@ -812,7 +816,7 @@ function chatBox(ch) {
 }
 function chatSplit() {
   const p = S.players || {}, mine = (S.roles || {})[me.pid], alive = p[me.pid] && p[me.pid].alive;
-  const chs = ['day'];   // khán giả chỉ đọc được chat làng
+  const chs = me.spec ? ['day', 'wolf', 'dead'] : ['day'];   // khán giả đọc được cả ba khung (chỉ đọc); ở khung Sói tên được thay bằng Sói 1, Sói 2…
   if (!me.spec) { if (mine === 'wolf') chs.push('wolf'); if (!alive) chs.push('dead'); }
   if (S.phase === 'night' && chs.includes('wolf')) chs.unshift(chs.splice(chs.indexOf('wolf'), 1)[0]);   // đêm: khung Sói lên đầu
   return chs.map(chatBox).join('');
