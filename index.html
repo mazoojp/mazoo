@@ -157,6 +157,7 @@
   .chatpair{display:grid;grid-template-columns:repeat(var(--n,2),minmax(0,1fr));gap:12px;align-items:start;position:sticky;top:68px}
   .chatpair .chat.sm,.chatpair .chat.sm.day,.chatpair .chat.sm.dead,.chatpair .chat.sm.wolf{height:min(640px,calc(100vh - 150px));margin-bottom:0}
   .chatpair.three{position:static} .chatpair.three .chat.sm.wolf{grid-column:1 / -1;height:min(380px,60vh)}
+  @media(max-width:600px){.chatpair,.chatpair.three{grid-template-columns:1fr !important}.chatpair .chat.sm.wolf{grid-column:auto !important}.chatpair .chat .sec .note{display:none}.chatpair .chat.sm,.chatpair .chat.sm.day,.chatpair .chat.sm.dead,.chatpair .chat.sm.wolf,.chatpair.three .chat.sm.wolf{height:340px}}   /* điện thoại hẹp: các khung chat xếp dọc cho đủ chỗ gõ */
   .chatrow{display:flex;gap:8px} .chatrow input{height:42px}
   .chatrow button{min-width:64px}
 
@@ -203,7 +204,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126az';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126bb';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -422,7 +423,8 @@ const hostShouldRun = () => B.mode === 'local' || (beatLoaded && !botAlive());
 // Người chạy luật: chủ phòng. Nếu máy chủ phòng ngừng (đóng tab, khóa máy, tab nền...) thì người thật online có tên vào phòng sớm nhất chạy thay,
 // để ván không đứng. Các bước luật đều idempotent nên hai máy cùng chạy cũng không sai.
 function runnerId() {
-  if (!S || !S.players) return null;
+  if (!S) return null;
+  if (!S.players) return S.roster ? S.host : null;   // danh sách người chơi bị mất giữa ván: chủ phòng chạy luật để khôi phục từ roster
   if (isOnline(S, S.host) || (S.host === (me && me.pid))) return S.host;
   const cand = Object.entries(S.players).filter(([id, p]) => !p.bot && isOnline(S, id)).sort((a, b) => (a[1].t || 0) - (b[1].t || 0));
   return cand.length ? cand[0][0] : S.host;
@@ -1723,7 +1725,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261126az';
+const APP_V = '20261126bb';
 const UPD_NOTE = '<div id="updnote" class="updnote">🔔 Có bản cập nhật mới. Bấm F5 (hoặc Ctrl + Shift + R) để tải lại trang nhé.</div>';
 async function checkNewVersion() {
   try {
