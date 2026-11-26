@@ -204,7 +204,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126bc';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126be';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -766,7 +766,7 @@ function revealHTML(list) {   // "ai là ai": gom theo vai, Sói đứng đầu;
   return rows.map(g => `<div style="margin:5px 0">${ROLE_ICON[g.r]} <b class="t-${g.r}">${ROLE_NAME[g.r]}</b>: ${g.xs.map(x => `<b>${esc(x.n)}</b>${x.a ? '' : ' 💀'}`).join(', ')}</div>`).join('');
 }
 function recapLines(L) {
-  return Object.keys(L || {}).sort().map(k => `<div class="note" style="margin:4px 0">${k === '999' ? '' : `<b>${k.startsWith('00') ? (k % 2 ? '🌙 Đêm ' + (Math.floor(k / 2) + 1) : '☀️ Ngày ' + (k / 2)) : { 1: '🌙 Đêm ' + +k.slice(0, 2), 2: '🏹 Thợ săn', 3: '☀️ Ngày ' + +k.slice(0, 2), 4: '🏹 Thợ săn' }[k[2]]}:</b> `}${k === '999' ? `<b>${esc(L[k])}</b>` : esc(L[k]).replace(/\n/g, ' ')}</div>`).join('');
+  return Object.keys(L || {}).sort().map(k => `<div class="note" style="margin:4px 0">${k === '999' ? '' : `<b>${k.startsWith('00') ? (k % 2 ? '🌙 Đêm ' + (Math.floor(k / 2) + 1) : '☀️ Ngày ' + (k / 2)) : { 1: '🌙 Đêm ' + +k.slice(0, 2), 2: '🏹 Thợ săn', 3: '☀️ Ngày ' + +k.slice(0, 2), 4: '🏹 Thợ săn' }[k[2]]}:</b> `}${k === '999' ? `<b>${esc(L[k])}</b>` : esc(L[k]).replace(/\n/g, '<br>')}</div>`).join('');
 }
 function recapHTML() {   // diễn biến ván (cập nhật suốt ván)
   const L = S.log || {};
@@ -1726,7 +1726,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261126bc';
+const APP_V = '20261126be';
 const UPD_NOTE = '<div id="updnote" class="updnote">🔔 Có bản cập nhật mới. Bấm F5 (hoặc Ctrl + Shift + R) để tải lại trang nhé.</div>';
 async function checkNewVersion() {
   try {

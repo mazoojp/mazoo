@@ -240,6 +240,14 @@ function votePlan(room, now) {
   if (t.top.length === 1 && t.max > 0) { dead = t.top[0]; u['players/' + dead + '/alive'] = false; u['dead/' + dead] = true; announce = `Làng treo cổ ${players[dead].name}${room.hideRoles ? '.' : ` (${ROLE_NAME[roles[dead]]}).`}`;   /* hideRoles: chế độ không lộ vai khi chết */ }
   else announce = 'Phiếu hòa hoặc không ai bỏ phiếu, hôm nay không ai bị treo cổ.';
   note = dead ? announce : 'Hòa phiếu, không ai bị treo cổ.';
+  // công khai ai bỏ phiếu cho ai (số trong ngoặc là số phiếu, Trưởng làng tính 2)
+  const nm = id => players[id].name, by = {};
+  Object.entries(v).forEach(([voter, tg]) => (by[tg] = by[tg] || []).push(voter));
+  const tot = vs => vs.reduce((n, id) => n + (roles[id] === 'chief' ? 2 : 1), 0);
+  const parts = Object.entries(by).sort((a, b) => tot(b[1]) - tot(a[1])).map(([tg, vs]) => `${nm(tg)} ← ${vs.map(nm).join(', ')} (${tot(vs)})`);
+  const abst = al.filter(id => !v[id]).map(nm);
+  const detail = '🗳️ Phiếu bầu:\n' + (parts.length ? parts.join('\n') : 'Không ai bỏ phiếu') + (abst.length && parts.length ? `\nKhông bỏ phiếu: ${abst.join(', ')}` : '');
+  announce += '\n' + detail; note += '\n' + detail;
   u['log/' + lk(r, 3)] = note;
   if (dead && roles[dead] === 'hunter') {   // Thợ săn bị treo cổ: được bắn một người trước khi gục
     u.phase = 'vote'; u.hunter = { id: dead, src: 'vote' };   // xem chú thích ở trên
