@@ -71,6 +71,9 @@ const aliveIds = room => Object.keys(room.players || {}).filter(id => room.playe
 // Lần cuối người này còn sống. Bot ghi lại GIỜ CỦA BOT lúc nó thấy nhịp tim đổi giá trị (room.seenAt) nên đồng hồ điện thoại lệch bao nhiêu cũng không sao;
 // nơi nào không có seenAt (máy chủ phòng tự chạy luật) thì dùng giờ ghi trong nhịp tim như cũ.
 const lastAlive = (room, id) => (room.seenAt && room.seenAt[id]) || (room.seen || {})[id] || (room.players[id] || {}).t || 0;
+// Nhịp tim bot được ghi lùi về TƯƠNG LAI chừng này: máy cũ (chưa tải lại trang) có đồng hồ nhanh hơn thật dưới ~1,5 phút vẫn thấy bot "đang sống",
+// nên không tự chạy luật rồi xóa nhầm người chơi. Máy mới trừ lại hằng số này nên vẫn nhận ra bot chết sau 20 giây.
+export const BEAT_AHEAD = 90000;
 export const LOBBY_IDLE_MS = 10000;   // phòng chờ: 10 giây không có nhịp tim thì coi là đã thoát (máy gửi nhịp mỗi 3 giây; bị xóa nhầm thì tự vào lại)
 // Giữa ván (đêm/ngày/bỏ phiếu) không ai bị xóa khỏi danh sách người chơi (thoát giữa ván chỉ là offline). Nếu danh sách bị mất người
 // (máy khách lỗi/ngủ rồi ghi đè bằng dữ liệu cũ...) thì khôi phục từ bản sao `roster` ghi lúc bắt đầu ván.
@@ -294,7 +297,7 @@ export function runBot(B, { log = console.log, now = () => Date.now(), maxAgeMs 
   const unwatch = B.watch('rooms', v => { rooms = v || {}; tick(); });
   const unwatch2 = B.watch('caro', v => { caroRooms = v || {}; });
   const iv = setInterval(tick, 1000);
-  const beat = () => B.set('meta/botBeat', now()).catch(() => {});
+  const beat = () => B.set('meta/botBeat', now() + BEAT_AHEAD).catch(() => {});
   beat(); const iv2 = setInterval(beat, 5000);
   return () => { clearInterval(iv); clearInterval(iv2); if (unwatch) unwatch(); if (unwatch2) unwatch2(); };
 }

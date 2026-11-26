@@ -194,7 +194,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126z';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126aa';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -400,7 +400,7 @@ const ready = () => B.set(base() + 'ready/' + me.pid, true);
 
 // Ai chạy luật? Có bot quản trò (masoi-bot) đang chạy thì bot lo. Không có bot (hoặc chế độ thử) thì máy của chủ phòng chạy luật.
 // Bot được coi là đang chạy nếu nhịp tim của nó (meta/botBeat) mới hơn 20 giây.
-const botAlive = () => beatLoaded && tnow() - botBeat < 20000;
+const botAlive = () => beatLoaded && tnow() - (botBeat - BEAT_AHEAD) < 20000;   // botBeat được bot ghi lùi về tương lai BEAT_AHEAD (xem rules.js)
 const hostShouldRun = () => B.mode === 'local' || (beatLoaded && !botAlive());
 // Người chạy luật: chủ phòng. Nếu máy chủ phòng ngừng (đóng tab, khóa máy, tab nền...) thì người thật online có tên vào phòng sớm nhất chạy thay,
 // để ván không đứng. Các bước luật đều idempotent nên hai máy cùng chạy cũng không sai.
@@ -497,7 +497,7 @@ const ic = (n, extra = '') => `<svg class="ic" viewBox="0 0 24 24" ${extra}>${IC
 let sideOpen = false;
 function shell(inner) {
   const caro = game === 'caro', cx = caro ? (cme || auth) : me, inRoom = caro ? !!(cme && C) : !!(me && S);
-  const notices = (B.mode === 'local' ? '<div class="banner">Chế độ thử: chỉ chơi được giữa các tab cùng một trình duyệt. Điền <b>config.js</b> (Firebase) để chơi online.</div>' : '')
+  const notices = (newVer ? '<div class="banner">Có bản mới của trang. Hết ván hãy tải lại trang (Cmd+Shift+R) để dùng bản mới.</div>' : '') + (B.mode === 'local' ? '<div class="banner">Chế độ thử: chỉ chơi được giữa các tab cùng một trình duyệt. Điền <b>config.js</b> (Firebase) để chơi online.</div>' : '')
     + (caro ? '' : '<div class="banner" id="botwarn" style="display:none">Bot quản trò không chạy nên chủ phòng đang chạy luật thay. Nếu chủ phòng thoát hoặc mất mạng, ván sẽ dừng.</div>');
   const it = (act, icon, label, on = false) => `<button class="it ${on ? 'on' : ''}" data-act="${act}" title="${label}">${ic(icon)}<span>${label}</span></button>`;
   const gt = (g, icon, label) => `<button class="it ${game === g ? 'on' : ''}" data-act="go" data-game="${g}" title="${label}">${ic(icon)}<span>${label}</span></button>`;
@@ -1641,6 +1641,19 @@ function refreshRoomList() {
   const html = roomListInner(); if (html !== rlSig) { rlSig = html; el.innerHTML = html; }
 }
 setInterval(refreshRoomList, 2000);
+
+/* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
+const APP_V = '20261126aa';
+async function checkNewVersion() {
+  try {
+    const t = await (await fetch(location.pathname + '?_v=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/const APP_V = '([^']+)'/);
+    if (!m || m[1] === APP_V) return;
+    const busy = me && !me.spec && S && S.phase !== 'lobby' && S.phase !== 'end';   // đang giữa ván thì không tự tải lại, chỉ báo
+    if (busy) { newVer = true; render(); } else location.reload();
+  } catch (e) {}
+}
+let newVer = false;
+setInterval(checkNewVersion, 60000);
 
 /* ============ Khởi động ============ */
 B = await makeBackend();
