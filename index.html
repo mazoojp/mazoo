@@ -420,6 +420,7 @@ function render() {
   const ae = document.activeElement, hadFocus = !!(ae && ae.dataset && ae.dataset.bind === 'chat'), caret = hadFocus ? ae.selectionStart : 0, focusCh = hadFocus ? ae.dataset.ch : '';
   const scr = {}; document.querySelectorAll('.chatlist').forEach(l => { scr[l.id] = { stick: l.scrollTop + l.clientHeight >= l.scrollHeight - 8, top: l.scrollTop }; });
   if (S.phase === 'lobby') { roleSeen = false; showRole = false; }
+  else if (!me.spec && !roleSeen && (S.roles || {})[me.pid]) { showRole = true; roleSeen = true; }   // đầu ván: thẻ vai lật sẵn, ai muốn ẩn thì bấm vào thẻ
   const key = S.phase + ':' + S.round;
   if (key !== pickKey) {
     pick = null; pickKey = key;
@@ -711,15 +712,6 @@ function wolfMatesHTML() {
   const mates = Object.keys(roles).filter(id => roles[id] === 'wolf' && id !== me.pid && p[id]);
   return `<div class="card" style="border-left:4px solid #DC2626;padding:10px 16px">🐺 <b>Đồng bọn Sói của bạn:</b> ${mates.length ? mates.map(id => esc(p[id].name) + (p[id].alive ? '' : ' (đã chết)')).join(', ') : 'không có (bạn là Sói duy nhất)'}</div>`;
 }
-function roleIntroHTML(my) {
-  const roles = S.roles || {}, p = S.players || {};
-  const mates = my === 'wolf' ? Object.keys(roles).filter(id => roles[id] === 'wolf' && id !== me.pid && p[id]).map(id => esc(p[id].name)) : null;
-  return `<div style="position:fixed;inset:0;background:#0a1f44d9;z-index:50;display:grid;place-items:center;padding:20px"><div class="card role ${my}" style="max-width:420px;width:100%;text-align:center">
-    <div class="note">Ván bắt đầu! Vai của bạn là</div><div class="big t-${my}" style="font-size:44px;margin:8px 0">${ROLE_NAME[my]}</div><div class="note">${ROLE_HINT[my]}</div>
-    ${mates ? `<div class="note" style="margin-top:8px">Đồng bọn: ${mates.length ? mates.join(', ') : 'không có (bạn là Sói duy nhất)'}</div>` : ''}
-    <div class="note" style="margin-top:8px">Đừng cho người khác thấy màn hình của bạn.</div>
-    <button class="primary" data-act="seenRole" style="margin-top:14px;min-width:200px">Đã rõ, bắt đầu</button></div></div>`;
-}
 function recapHTML() {   // diễn biến ván (hiện khi kết thúc)
   const L = S.log || {}, ks = Object.keys(L).sort();
   return ks.length ? `<div class="card"><div class="sec">📜 Diễn biến ván</div>${ks.map(k => `<div class="note" style="margin:4px 0"><b>${k % 2 ? '🌙 Đêm ' + (Math.floor(k / 2) + 1) : '☀️ Ngày ' + (k / 2)}:</b> ${esc(L[k]).replace(/\n/g, ' ')}</div>`).join('')}</div>` : '';
@@ -729,7 +721,6 @@ function gameHTML() {
   const alive = Object.keys(p).filter(id => p[id].alive);
   const PH = { night: ['🌙 Ban đêm', 'mute'], day: ['☀️ Ban ngày', 'amber'], vote: ['🗳️ Bỏ phiếu', 'red'], end: ['🏁 Kết thúc', 'green'] }[S.phase];
   let out = `<div class="status"><span class="chip ${PH[1]}">${PH[0]}</span><span class="chip mute">Đêm thứ ${S.round}</span><span class="chip" id="cd"></span><span class="chip mute">${alive.length}/${Object.keys(p).length} còn sống</span>${S.hideRoles ? '<span class="chip mute">🎭 Ẩn vai khi chết</span>' : ''}${Object.keys(S.spectators || {}).length ? `<span class="chip mute">👀 ${Object.keys(S.spectators).length} khán giả</span>` : ''}</div>`;
-  if (myRole && !roleSeen) out += roleIntroHTML(myRole);   // đầu ván: hiện ngay vai của bạn
   out += rolesSummary() + todoHTML();
   out += `<div class="card role ${showRole && myRole ? myRole : ''} ${!roleSeen && myRole ? 'pulse' : ''}" data-act="toggleRole">${showRole && myRole
     ? `<div class="note">Vai của bạn</div><div class="big t-${myRole}">${ROLE_NAME[myRole]}</div><div class="note">${ROLE_HINT[myRole]}</div><div class="note" style="margin-top:6px">(bấm để ẩn)</div>`
@@ -1516,7 +1507,6 @@ document.addEventListener('click', e => {
   if (a === 'join') { game === 'caro' ? caroJoin() : joinOrCreate(); } else if (a === 'leave') { game === 'caro' ? caroLeave() : leave(); }
   else if (a === 'home') { if (game === 'ngu') { nguSave(); (async () => { if (NCm) await ncLeave(); game = 'masoi'; render(); })(); } else if (game === 'gchat') { gcStop(); game = 'masoi'; render(); } else if (game === 'donate' || game === 'menu') { game = 'masoi'; render(); } else if (game === 'caro') { if (cme) caroLeave(); } else if (me) leave(); }
   else if (a === 'toggleHide') { if (S && S.host === me.pid && S.phase === 'lobby') B.set(base() + 'hideRoles', !S.hideRoles); }
-  else if (a === 'seenRole') { roleSeen = true; render(); }
   else if (a === 'toggleSpec') { if (S && S.host === me.pid) B.set(base() + 'allowSpec', !specOn()); }
   else if (a === 'side') { sideOpen = !sideOpen; render(); }
   else if (a === 'goChat') { const i = document.querySelector('[data-bind=chat]:not([disabled])') || document.querySelector('[data-bind=chat]'); if (i) { i.scrollIntoView({ block: 'center', behavior: 'smooth' }); i.focus(); } }
