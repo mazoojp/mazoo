@@ -190,7 +190,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126l';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126m';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -725,9 +725,10 @@ function gameHTML() {
   const PH = { night: ['🌙 Ban đêm', 'mute'], day: ['☀️ Ban ngày', 'amber'], vote: ['🗳️ Bỏ phiếu', 'red'], end: ['🏁 Kết thúc', 'green'] }[S.phase];
   let out = `<div class="status"><span class="chip ${PH[1]}">${PH[0]}</span><span class="chip mute">Đêm thứ ${S.round}</span><span class="chip" id="cd"></span><span class="chip mute">${alive.length}/${Object.keys(p).length} còn sống</span>${S.hideRoles ? '<span class="chip mute">🎭 Ẩn vai khi chết</span>' : ''}${Object.keys(S.spectators || {}).length ? `<span class="chip mute">👀 ${Object.keys(S.spectators).length} khán giả</span>` : ''}</div>`;
   out += rolesSummary() + todoHTML() + recapHTML();   // dòng "ván này có" cố định trên cùng; diễn biến (khi đã có) nằm trên thẻ vai và cập nhật ngay trong lúc chơi
-  out += `<div class="card role ${showRole && myRole ? myRole : ''} ${!roleSeen && myRole ? 'pulse' : ''}" data-act="toggleRole">${showRole && myRole
+  const roleCard = `<div class="card role ${showRole && myRole ? myRole : ''} ${!roleSeen && myRole ? 'pulse' : ''}" data-act="toggleRole">${showRole && myRole
     ? `<div class="note">Vai của bạn</div><div class="big t-${myRole}">${ROLE_NAME[myRole]}</div><div class="note">${ROLE_HINT[myRole]}</div><div class="note" style="margin-top:6px">(bấm để ẩn)</div>`
     : `<div class="note">${roleSeen ? 'Bấm để xem lại vai (đừng cho người khác thấy)' : '👆 Bấm vào đây để xem vai của bạn (đừng cho người khác thấy)'}</div><div class="big">🎴</div>`}</div>`;
+  if (!S.log) out += roleCard;   // đầu ván (chưa có diễn biến): thẻ vai nằm trên; sau đó xuống dưới cùng
   out += wolfMatesHTML();
   if (S.announce) out += `<div class="card ann">${esc(S.announce).replace(/\n/g, '<br>')}</div>`;
   if (myRole === 'seer' && S.seerLog) out += `<div class="card"><div class="sec">🔮 Kết quả soi</div>${Object.keys(S.seerLog).sort((a, b) => a - b).map(k => `<div>${esc(S.seerLog[k])}</div>`).join('')}</div>`;
@@ -756,6 +757,7 @@ function gameHTML() {
     out += `<div class="card ann"><b>${esc(S.winner || '')}</b><div class="row" style="justify-content:center;margin-top:12px"><button class="primary" id="againbtn" data-act="again" style="min-width:180px">Chơi ván mới</button><button class="ghost" data-act="leave">Thoát khỏi phòng</button></div></div>`;
   }
   out += `<div class="card"><div class="sec">Người chơi</div>${playersGrid(S.phase === 'end', false)}</div>`;
+  if (S.log) out += roleCard;
   return `<div class="cols"><div class="stack">${out}</div><div class="stack">${chatHTML()}${S.host === me.pid ? specBtn() : ''}${S.phase === 'end' ? '' : '<button class="ghost" data-act="leave">Thoát khỏi phòng</button>'}</div></div>`;
 }
 
