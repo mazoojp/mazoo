@@ -145,7 +145,7 @@
   .chatlist,#gchatlist,#cchatlist{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;background:#f9f9fb;border-radius:12px;padding:10px;margin-bottom:10px} .chatlist>*,#gchatlist>*,#cchatlist>*{flex:none}
   .msg{margin:5px 0;overflow-wrap:anywhere}
   .msg .chn{font-weight:700;font-size:12px;padding:1px 7px;border-radius:999px;margin-right:2px} .chn.day{background:#E8F1FD;color:#1371E2} .chn.wolf{background:#FDECEC;color:#DC2626} .chn.dead{background:#EEF0F3;color:#6B7280} .msg b{color:var(--pri)} .msg.wolfmsg b{color:var(--red)} .msg.deadmsg b{color:var(--faint)}
-  .chat.sm{height:min(340px,55vh);position:static;margin-bottom:12px} .chat.sm.day{height:min(640px,90vh)} .chat.day{border-top:4px solid var(--pri)} .chat.wolf{border-top:4px solid #DC2626;background:#fffafa} .chat.dead{border-top:4px solid #6B7280}
+  .chat.sm{height:min(340px,55vh);position:static;margin-bottom:12px} .chat.sm.day{height:min(640px,90vh)} .chat.sm.dead{height:min(560px,80vh)} .chat.sm.wolf{height:min(420px,65vh)} .chat.day{border-top:4px solid var(--pri)} .chat.wolf{border-top:4px solid #DC2626;background:#fffafa} .chat.dead{border-top:4px solid #6B7280}
   .chat .open{font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;margin-left:8px;background:#E7F7EE;color:#12803A} .chat .closed{background:#EEF0F3;color:#6B7280}
   .msg.bub{display:flex;flex-direction:column;align-items:flex-start;margin:7px 0} .msg.bub .who{font-size:11px;color:var(--mute);margin:0 6px 2px} .msg.bub .tx{background:#fff;border:1px solid #e5e7eb;border-radius:14px 14px 14px 4px;padding:6px 11px;max-width:85%;overflow-wrap:anywhere}
   .msg.bub.mine{align-items:flex-end} .msg.bub.mine .tx{border-radius:14px 14px 4px 14px}   /* tin của mình vẫn nền trắng như của người khác, chỉ nằm bên phải */
@@ -198,7 +198,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126an';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126ao';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -1688,7 +1688,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261126an';
+const APP_V = '20261126ao';
 async function checkNewVersion() {
   try {
     const t = await (await fetch(location.pathname + '?_v=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/const APP_V = '([^']+)'/);
