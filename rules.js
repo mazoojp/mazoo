@@ -244,7 +244,9 @@ function votePlan(room, now) {
   const nm = id => players[id].name, by = {};
   Object.entries(v).forEach(([voter, tg]) => (by[tg] = by[tg] || []).push(voter));
   const tot = vs => vs.reduce((n, id) => n + (roles[id] === 'chief' ? 2 : 1), 0);
-  const parts = Object.entries(by).sort((a, b) => tot(b[1]) - tot(a[1])).map(([tg, vs]) => `${nm(tg)} ← ${vs.map(nm).join(', ')} (${tot(vs)})`);
+  // luật gốc: "(5 phiếu)" hoặc, khi có Trưởng làng bầu, "(5 người, 6 phiếu)". Chế độ căng: chỉ ghi số người, không để lộ ai là Trưởng làng
+  const cnt = vs => room.hideRoles ? `${vs.length} người` : tot(vs) === vs.length ? `${vs.length} phiếu` : `${vs.length} người, ${tot(vs)} phiếu`;
+  const parts = Object.entries(by).sort((a, b) => tot(b[1]) - tot(a[1])).map(([tg, vs]) => `${nm(tg)} ← ${vs.map(nm).join(', ')} (${cnt(vs)})`);
   const abst = al.filter(id => !v[id]).map(nm);
   const detail = '🗳️ Phiếu bầu:\n' + (parts.length ? parts.join('\n') : 'Không ai bỏ phiếu') + (abst.length && parts.length ? `\nKhông bỏ phiếu: ${abst.join(', ')}` : '');
   announce += '\n' + detail; note += '\n' + detail;
