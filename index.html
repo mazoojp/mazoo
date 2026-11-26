@@ -680,7 +680,8 @@ function specHTML() {
   out += rolesSummary();
   out += `<div class="todo">👀 ${why} Khán giả thấy hết vai và hành động của mọi người nhưng không chat được.</div>`;
   if (S.announce) out += `<div class="card ann">${esc(S.announce).replace(/\n/g, '<br>')}</div>`;
-  if (S.winner) out += `<div class="card ann"><b>${esc(S.winner)}</b></div>` + recapHTML();
+  if (S.winner) out += `<div class="card ann"><b>${esc(S.winner)}</b></div>`;
+  out += recapHTML();
   if (S.phase === 'night') {
     const n = S.night || {}, wv = Object.entries(n.wolf || {});
     out += `<div class="card"><div class="sec">Hành động đêm nay</div>
@@ -750,8 +751,9 @@ function gameHTML() {
     else out += v[me.pid] ? `<div class="card">Bạn đã bỏ phiếu cho <b>${esc(p[v[me.pid]].name)}</b>.</div>` : picker(alive.filter(id => id !== me.pid), 'vote', 'Bỏ phiếu treo cổ');
     out += `<p class="note" style="text-align:center">Đã bỏ phiếu: ${cnt}/${alive.length}</p>`;
   } else if (S.phase === 'end') {
-    out += `<div class="card ann"><b>${esc(S.winner || '')}</b><div class="row" style="justify-content:center;margin-top:12px"><button class="primary" id="againbtn" data-act="again" style="min-width:180px">Chơi ván mới</button></div></div>` + recapHTML();
+    out += `<div class="card ann"><b>${esc(S.winner || '')}</b><div class="row" style="justify-content:center;margin-top:12px"><button class="primary" id="againbtn" data-act="again" style="min-width:180px">Chơi ván mới</button></div></div>`;
   }
+  out += recapHTML();   // diễn biến ván: cập nhật ngay trong lúc chơi
   out += `<div class="card"><div class="sec">Người chơi</div>${playersGrid(S.phase === 'end', false)}</div>`;
   return `<div class="cols"><div class="stack">${out}</div><div class="stack">${chatHTML()}${S.host === me.pid ? specBtn() : ''}<button class="ghost" data-act="leave">Thoát khỏi phòng</button></div></div>`;
 }
