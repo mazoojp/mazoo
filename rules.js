@@ -4,7 +4,7 @@
 // "Backend" B là đối tượng có: get(path), set(path, value), update({path: value}), watch(path, cb).
 
 export const ROLE_NAME = { wolf: 'Sói', seer: 'Tiên tri', guard: 'Bảo vệ', vill: 'Dân làng' };
-export const DUR = { night: 45, day: 120, vote: 60 };   // giây (mặc định)
+export const DUR = { night: 20, day: 120, vote: 60 };   // giây (mặc định)
 export const DAY_OPTIONS = [60, 120, 180, 300, 600];   // thời gian thảo luận ban ngày mà chủ phòng được chọn (giây), lưu ở room.dayTime
 export const durOf = (room, ph) => ph === 'day' && DAY_OPTIONS.includes(room && room.dayTime) ? room.dayTime : DUR[ph];
 export const MIN = 4, MAX = 20;
@@ -224,7 +224,7 @@ export function planBots(room, now) {
   if (ph === 'night') {
     const n = room.night || {};
     for (const b of bots) {
-      if (el < 3000 + hash(b + 'n' + r) * 15000) continue;
+      if (el < 2000 + hash(b + 'n' + r) * 10000) continue;
       if (roles[b] === 'wolf' && !(n.wolf || {})[b]) {
         const c = al.filter(id => roles[id] !== 'wolf'); if (c.length) u['night/wolf/' + b] = hpick(c, 'wolf' + r);   // Sói máy cùng chọn một mục tiêu
       } else if (roles[b] === 'seer' && !n.seer) {
