@@ -257,7 +257,7 @@ const ROLE_HINT = {
   vill: 'Ban ngày thảo luận và bỏ phiếu treo cổ Sói.'
 };
 let TOFF = 0;
-const tnow = () => Date.now() + TOFF;   // giờ theo máy chủ Firebase: đồng hồ điện thoại lệch vài chục giây không còn làm bot/chủ phòng xoá nhầm người khỏi phòng chờ
+const tnow = () => Math.round(Date.now() + TOFF);   // giờ theo máy chủ Firebase: đồng hồ điện thoại lệch vài chục giây không còn làm bot/chủ phòng xoá nhầm người khỏi phòng chờ
 let B, S = null, unwatch = null, botBeat = 0, beatLoaded = false, lastReadd = 0;
 let cDraft = '', auth = null, authName = '', authPass = '', authErr = '', authBusy = false, rankData = null, rankLoading = false, showRank = false, donateOk = false, msgName = '', msgText = '', msgStatus = '', msgSentAt = 0;
 let game = 'masoi', C = null, cme = null, cUnwatch = null, cSig = '', cBeatSent = false;
@@ -837,9 +837,9 @@ function chatHTML() {   // phòng chờ và khán đài (đang chơi): một khu
 }
 async function sendChat(ch) {
   ch = ch || chatTab; const text = (chatDrafts[ch] || '').trim().slice(0, 200); if (!text || !S || chatRule(ch)) return;
-  const id = Date.now().toString(36).padStart(9, '0') + '_' + rid();
+  const id = tnow().toString(36).padStart(9, '0') + '_' + rid();
   chatDrafts[ch] = '';
-  await B.set(base() + 'chat/' + id, { c: ch, pid: me.pid, name: me.name, text, t: Date.now() });
+  await B.set(base() + 'chat/' + id, { c: ch, pid: me.pid, name: me.name, text, t: tnow() });
   focusChat(0, ch);
 }
 
@@ -856,8 +856,8 @@ async function sendMessage() {
   if (Date.now() - msgSentAt < 30000) { msgStatus = 'err:Bạn vừa gửi xong, hãy đợi 30 giây rồi gửi tiếp.'; return render(); }
   msgStatus = 'sending'; render();
   try {
-    const id = Date.now().toString(36) + '_' + rid();
-    await B.set('messages/' + id, { text, t: Date.now(), ...(name ? { name } : {}) });
+    const id = tnow().toString(36) + '_' + rid();
+    await B.set('messages/' + id, { text, t: tnow(), ...(name ? { name } : {}) });
     msgSentAt = Date.now(); msgText = ''; msgStatus = 'ok';
   } catch (e) { msgStatus = 'err:Chưa gửi được lúc này. Hãy thử lại sau.'; }
   render();
@@ -915,8 +915,8 @@ async function gcSend() {
   const name = gcSaved(), text = gcDraft.trim().slice(0, 300); if (!name || !text) return;
   if (Date.now() - gcSentAt < 1500) { gcErr = 'Bạn gửi hơi nhanh, đợi 1–2 giây nhé.'; return render(); }
   gcSentAt = Date.now(); gcDraft = ''; gcErr = '';
-  const id = Date.now().toString(36).padStart(9, '0') + '_' + rid();
-  try { await B.set('gchat/' + id, { name, text, t: Date.now() }); } catch (e) { gcErr = 'Chưa gửi được, thử lại sau.'; render(); }
+  const id = tnow().toString(36).padStart(9, '0') + '_' + rid();
+  try { await B.set('gchat/' + id, { name, text, t: tnow() }); } catch (e) { gcErr = 'Chưa gửi được, thử lại sau.'; render(); }
   const i = document.querySelector('[data-bind=gchat]'); if (i) i.focus();
 }
 function gcHTML() {
@@ -1153,7 +1153,7 @@ async function ncLeave() {
 async function ncChatSend() {
   const text = ncDraft.trim().slice(0, 200); if (!NCm || !text || Date.now() - ncChatT < 800) return;
   ncChatT = Date.now(); ncDraft = ''; const i = document.querySelector('[data-bind=ncchat]'); if (i) { i.value = ''; i.focus(); }
-  const id = Date.now().toString(36).padStart(9, '0') + '_' + rid(), ids = Object.keys((NCR && NCR.chat) || {}).sort(), upd = { [ncBase() + 'chat/' + id]: { name: NCm.name, text, t: Date.now() } };
+  const id = tnow().toString(36).padStart(9, '0') + '_' + rid(), ids = Object.keys((NCR && NCR.chat) || {}).sort(), upd = { [ncBase() + 'chat/' + id]: { name: NCm.name, text, t: tnow() } };
   if (ids.length > 60) ids.slice(0, ids.length - 50).forEach(k => { upd[ncBase() + 'chat/' + k] = null; });   // giữ 50 tin mới nhất
   try { await B.update(upd); } catch (e) { nguSay2('Chưa gửi được tin nhắn.'); }
 }
@@ -1387,9 +1387,9 @@ function caroChatHTML() {
 }
 async function caroSendChat() {
   const text = cDraft.trim().slice(0, 200); if (!text || !C) return;
-  const id = Date.now().toString(36).padStart(9, '0') + '_' + rid();
+  const id = tnow().toString(36).padStart(9, '0') + '_' + rid();
   cDraft = '';
-  await B.set(cbase() + 'chat/' + id, { pid: cme.pid, name: cme.name, text, t: Date.now(), ...(cme.spec ? { spec: true } : {}) });
+  await B.set(cbase() + 'chat/' + id, { pid: cme.pid, name: cme.name, text, t: tnow(), ...(cme.spec ? { spec: true } : {}) });
   caroFocusChat(0);
 }
 function caroHomeHTML() {
