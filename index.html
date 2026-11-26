@@ -204,7 +204,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126bf';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126bg';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -455,8 +455,6 @@ function updateClock() {
   }
   const ab = document.getElementById('againbtn');
   if (ab) { const rem = S && S.endedAt ? Math.ceil((S.endedAt + AGAIN_LOCK * 1000 - tnow()) / 1000) : 0; ab.disabled = rem > 0; ab.textContent = rem > 0 ? `Chơi ván mới (${rem}s)` : 'Chơi ván mới'; }
-  const w = document.getElementById('botwarn');
-  if (w) w.style.display = B.mode === 'firebase' && beatLoaded && !botAlive() ? '' : 'none';
 }
 
 /* ============ Giao diện ============ */
@@ -519,8 +517,7 @@ const ic = (n, extra = '') => `<svg class="ic" viewBox="0 0 24 24" ${extra}>${IC
 let sideOpen = false;
 function shell(inner) {
   const caro = game === 'caro', cx = caro ? (cme || auth) : me, inRoom = caro ? !!(cme && C) : !!(me && S);
-  const notices = (newVer ? UPD_NOTE : '') + (B.mode === 'local' ? '<div class="banner">Chế độ thử: chỉ chơi được giữa các tab cùng một trình duyệt. Điền <b>config.js</b> (Firebase) để chơi online.</div>' : '')
-    + (caro ? '' : '<div class="banner" id="botwarn" style="display:none">Bot quản trò không chạy nên chủ phòng đang chạy luật thay. Nếu chủ phòng thoát hoặc mất mạng, ván sẽ dừng.</div>');
+  const notices = (newVer ? UPD_NOTE : '') + (B.mode === 'local' ? '<div class="banner">Chế độ thử: chỉ chơi được giữa các tab cùng một trình duyệt. Điền <b>config.js</b> (Firebase) để chơi online.</div>' : '');
   const it = (act, icon, label, on = false) => `<button class="it ${on ? 'on' : ''}" data-act="${act}" title="${label}">${ic(icon)}<span>${label}</span></button>`;
   const gt = (g, icon, label) => `<button class="it ${game === g ? 'on' : ''}" data-act="go" data-game="${g}" title="${label}">${ic(icon)}<span>${label}</span></button>`;
   const logo = caro ? '<span class="logo"><span class="m">cờ</span><span class="o" style="font-size:11px">XO</span><span class="s">caro</span></span>'
@@ -1726,7 +1723,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261126bf';
+const APP_V = '20261126bg';
 const UPD_NOTE = '<div id="updnote" class="updnote">🔔 Có bản cập nhật mới. Bấm F5 (hoặc Ctrl + Shift + R) để tải lại trang nhé.</div>';
 async function checkNewVersion() {
   try {
