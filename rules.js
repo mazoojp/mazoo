@@ -7,7 +7,7 @@ export const ROLE_NAME = { wolf: 'Sói', seer: 'Tiên tri', guard: 'Bảo vệ',
 export const DUR = { night: 45, day: 120, vote: 60 };   // giây (mặc định)
 export const DAY_OPTIONS = [60, 120, 180, 300, 600];   // thời gian thảo luận ban ngày mà chủ phòng được chọn (giây), lưu ở room.dayTime
 export const durOf = (room, ph) => ph === 'day' && DAY_OPTIONS.includes(room && room.dayTime) ? room.dayTime : DUR[ph];
-export const MIN = 4, MAX = 12;
+export const MIN = 4, MAX = 20;
 export const AGAIN_LOCK = 8;   // giây: hết ván phải chờ chừng này mới bấm được "Chơi ván mới" (để mọi người kịp xem kết quả, không bị một người bấm kéo cả phòng về phòng chờ)
 export const LOBBY_WAIT = 60;   // giây: thiếu người mà không ai vào thêm thì tự thêm người máy
 export const BOT_NAMES = ['Mít', 'Bơ', 'Na', 'Ổi', 'Xoài', 'Cam', 'Dừa', 'Lê', 'Mận', 'Nho', 'Khế', 'Sấu'];
@@ -24,7 +24,7 @@ export function lobbyFillAt(room) {
 function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
 export function assignRoles(ids) {
-  const n = ids.length, wolves = n <= 5 ? 1 : n <= 8 ? 2 : 3;
+  const n = ids.length, wolves = n <= 5 ? 1 : n <= 8 ? 2 : n <= 12 ? 3 : n <= 16 ? 4 : 5;
   const roles = Array(wolves).fill('wolf'); roles.push('seer'); if (n >= 6) roles.push('guard');
   while (roles.length < n) roles.push('vill');
   shuffle(roles); const out = {}; ids.forEach((id, i) => out[id] = roles[i]); return out;
@@ -263,6 +263,12 @@ export async function stepRoom(B, code, room, now) {
 }
 
 /* ---------- Bot quản trò: theo dõi mọi phòng, chạy luật, dọn phòng cũ ---------- */
+// Tin nhắn của máy cũ (đồng hồ lệch) có mã/giờ sai nên bị xếp sai chỗ: bot đóng dấu giờ máy chủ `ts` cho mọi tin chưa có, trang xếp theo `ts`.
+export function chatStamps(basePath, chat, now) {
+  const u = {};
+  for (const [id, m] of Object.entries(chat || {})) if (m && typeof m === 'object' && m.ts == null) u[basePath + '/' + id + '/ts'] = now;
+  return u;
+}
 export function runBot(B, { log = console.log, now = () => Date.now(), maxAgeMs = 12 * 3600 * 1000 } = {}) {
   let rooms = {}, caroRooms = {}; const busy = {};
   const track = {};   // track[mã][pid] = { v: giá trị nhịp tim lần trước, at: giờ bot thấy nó đổi }
@@ -278,6 +284,10 @@ export function runBot(B, { log = console.log, now = () => Date.now(), maxAgeMs 
     return { ...room, seenAt };
   };
   const tick = async () => {
+    const stamps = {};
+    for (const [code, room] of Object.entries(rooms || {})) if (room && room.chat) Object.assign(stamps, chatStamps('rooms/' + code + '/chat', room.chat, now()));
+    for (const [code, room] of Object.entries(caroRooms || {})) if (room && room.chat) Object.assign(stamps, chatStamps('caro/' + code + '/chat', room.chat, now()));
+    if (Object.keys(stamps).length) { try { await B.update(stamps); } catch (e) { log('Lỗi đóng dấu giờ tin nhắn', e && e.message); } }
     for (const [code, room] of Object.entries(caroRooms || {})) {   // dọn phòng cờ caro quá cũ
       if (room && room.createdAt && now() - room.createdAt > maxAgeMs && !busy['caro' + code]) {
         busy['caro' + code] = true; try { await B.set('caro/' + code, null); log('Xóa phòng caro cũ', code); } finally { busy['caro' + code] = false; }

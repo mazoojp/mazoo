@@ -194,7 +194,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126aa';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126ac';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -261,7 +261,10 @@ const ROLE_HINT = {
   vill: 'Ban ngày thảo luận và bỏ phiếu treo cổ Sói.'
 };
 let TOFF = 0;
-const tnow = () => Math.round(Date.now() + TOFF);   // giờ theo máy chủ Firebase: đồng hồ điện thoại lệch vài chục giây không còn làm bot/chủ phòng xoá nhầm người khỏi phòng chờ
+const tnow = () => Math.round(Date.now() + TOFF);
+const SV = () => B && B.mode === 'firebase' ? { '.sv': 'timestamp' } : tnow();   // giờ máy chủ do Firebase đóng dấu lúc ghi
+const keyT = k => parseInt(String(k).split('_')[0], 36) || 0;
+const msgOrder = (a, b) => ((a[1].ts != null ? a[1].ts : keyT(a[0])) - (b[1].ts != null ? b[1].ts : keyT(b[0]))) || (a[0] < b[0] ? -1 : 1);   // xếp theo giờ máy chủ (ts); chưa có ts thì theo giờ trong mã tin   // giờ theo máy chủ Firebase: đồng hồ điện thoại lệch vài chục giây không còn làm bot/chủ phòng xoá nhầm người khỏi phòng chờ
 let B, S = null, unwatch = null, botBeat = 0, beatLoaded = false, lastReadd = 0;
 let cDraft = '', auth = null, authName = '', authPass = '', authErr = '', authBusy = false, rankData = null, rankLoading = false, showRank = false, donateOk = false, msgName = '', msgText = '', msgStatus = '', msgSentAt = 0;
 let game = 'masoi', C = null, cme = null, cUnwatch = null, cSig = '', cBeatSent = false;
@@ -809,7 +812,7 @@ function chatSees(ch) {   // kênh nào mình được đọc
   if (ch === 'dead') { const p = (S.players || {})[me.pid]; return !!p && !p.alive; }
   return false;
 }
-const chatMsgs = ch => Object.entries(S.chat || {}).filter(([, m]) => m.c === ch).sort((a, b) => a[0] < b[0] ? -1 : 1).slice(-60);
+const chatMsgs = ch => Object.entries(S.chat || {}).filter(([, m]) => m.c === ch).sort(msgOrder).slice(-60);
 // Trong ván, mỗi kênh là MỘT KHUNG RIÊNG, ô nhập riêng, không bao giờ nhầm đêm/ngày:
 //   Chat làng (ban ngày) · Chat Sói (ban đêm, chỉ Sói thấy) · Chat người chết
 const wolfAlias = pid => {   // khán giả không thấy tên thật của Sói: chỉ "Sói 1", "Sói 2"… (đánh số theo thứ tự vào phòng)
@@ -838,7 +841,7 @@ function chatHTML() {   // phòng chờ và khán đài (đang chơi): một khu
   if (S.phase === 'end') return chatBox('day');
   if (S.phase !== 'lobby') return chatSplit();
   const tabs = chatTabs().filter(t => !me.spec); if (!tabs.some(t => t[0] === chatTab)) chatTab = 'day';
-  const msgs = Object.entries(S.chat || {}).filter(([, m]) => chatSees(m.c)).sort((a, b) => a[0] < b[0] ? -1 : 1).slice(-80);
+  const msgs = Object.entries(S.chat || {}).filter(([, m]) => chatSees(m.c)).sort(msgOrder).slice(-80);
   const why = chatRule(chatTab);
   return `<div class="card chat"><div class="sec">💬 Chat</div>
   <div class="chatlist" id="chatlist-merged">${msgs.length ? msgs.map(([, m]) => msgBub(m, true)).join('') : '<div class="note">Chưa có tin nhắn.</div>'}</div>
@@ -851,7 +854,7 @@ async function sendChat(ch) {
   ch = ch || chatTab; const text = (chatDrafts[ch] || '').trim().slice(0, 200); if (!text || !S || chatRule(ch)) return;
   const id = tnow().toString(36).padStart(9, '0') + '_' + rid();
   chatDrafts[ch] = '';
-  await B.set(base() + 'chat/' + id, { c: ch, pid: me.pid, name: me.name, text, t: tnow() });
+  await B.set(base() + 'chat/' + id, { c: ch, pid: me.pid, name: me.name, text, t: tnow(), ts: SV() });
   focusChat(0, ch);
 }
 
@@ -1409,7 +1412,7 @@ function caroRender() {
 }
 function caroFocusChat(pos) { const i = document.querySelector('[data-bind=cchat]'); if (!i) return; i.focus(); try { i.setSelectionRange(pos, pos); } catch (e) {} }
 function caroChatHTML() {
-  const msgs = Object.entries(C.chat || {}).sort((a, b) => a[0] < b[0] ? -1 : 1).slice(-80);
+  const msgs = Object.entries(C.chat || {}).sort(msgOrder).slice(-80);
   const why = '';   // cờ caro: khán giả cũng chat được
   return `<div class="card chat" style="height:360px;position:static"><div class="sec">💬 Chat</div>
   <div id="cchatlist" style="flex:1;min-height:0;overflow-y:auto;background:#f9f9fb;border-radius:12px;padding:10px;margin-bottom:10px">${msgs.length ? msgs.map(([, m]) => `<div class="msg"><b ${m.pid === cme.pid ? 'style="color:var(--green)"' : ''}>${esc(m.name)}</b>${m.spec ? ' <span class="chip mute" style="height:18px;font-size:10px;padding:0 6px">khán giả</span>' : ''}: ${esc(m.text)}</div>`).join('') : '<div class="note">Chưa có tin nhắn.</div>'}</div>
@@ -1421,7 +1424,7 @@ async function caroSendChat() {
   const text = cDraft.trim().slice(0, 200); if (!text || !C) return;
   const id = tnow().toString(36).padStart(9, '0') + '_' + rid();
   cDraft = '';
-  await B.set(cbase() + 'chat/' + id, { pid: cme.pid, name: cme.name, text, t: tnow(), ...(cme.spec ? { spec: true } : {}) });
+  await B.set(cbase() + 'chat/' + id, { pid: cme.pid, name: cme.name, text, t: tnow(), ts: SV(), ...(cme.spec ? { spec: true } : {}) });
   caroFocusChat(0);
 }
 function caroHomeHTML() {
@@ -1643,7 +1646,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261126aa';
+const APP_V = '20261126ac';
 async function checkNewVersion() {
   try {
     const t = await (await fetch(location.pathname + '?_v=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/const APP_V = '([^']+)'/);
