@@ -98,7 +98,10 @@ export function planStep(room, now) {
     if (all || expired) return nightPlan(room, now);
   } else if (room.phase === 'day') {
     const al = aliveIds(room), rd = room.ready || {};
-    if ((al.length && al.every(id => rd[id])) || expired) return { u: { phase: 'vote', votes: null, ready: null, deadline: now + DUR.vote * 1000, announce: 'Mọi người bỏ phiếu chọn người bị treo cổ.' } };
+    if ((al.length && al.every(id => rd[id])) || expired) {
+      if (room.round === 0) return { u: { phase: 'night', round: 1, night: null, votes: null, ready: null, deadline: now + DUR.night * 1000, announce: 'Đêm 1 bắt đầu. Cả làng đi ngủ…' } };   // buổi sáng mở đầu: không bỏ phiếu, hết giờ là sang đêm 1
+      return { u: { phase: 'vote', votes: null, ready: null, deadline: now + DUR.vote * 1000, announce: 'Mọi người bỏ phiếu chọn người bị treo cổ.' } };
+    }
   } else if (room.phase === 'vote') {
     const al = aliveIds(room), v = room.votes || {};
     if ((al.length && al.every(id => v[id])) || expired) return votePlan(room, now);
@@ -107,7 +110,7 @@ export function planStep(room, now) {
 }
 
 function startPlan(room, ids, now) {
-  const roles = assignRoles(ids), u = { cmd: null, phase: 'night', round: 1, night: null, votes: null, ready: null, botMem: null, seerLog: null, winner: null, log: null, endedAt: null, chat: null, deadline: now + DUR.night * 1000, announce: 'Đêm 1 bắt đầu. Cả làng đi ngủ…' };
+  const roles = assignRoles(ids), u = { cmd: null, phase: 'day', round: 0, night: null, votes: null, ready: null, botMem: null, seerLog: null, winner: null, log: null, endedAt: null, chat: null, deadline: now + durOf(room, 'day') * 1000, announce: 'Ván bắt đầu! Buổi sáng mở đầu: mọi người làm quen và trò chuyện với nhau. Hết giờ thì trời tối, Đêm 1 bắt đầu.' };   // mở đầu bằng một buổi sáng nói chuyện (không bỏ phiếu) rồi mới sang đêm 1
   ids.forEach(id => { u['roles/' + id] = roles[id]; u['players/' + id + '/alive'] = true; u['players/' + id + '/ready'] = null; });
   return { u };
 }
