@@ -3,7 +3,7 @@
 //
 // "Backend" B là đối tượng có: get(path), set(path, value), update({path: value}), watch(path, cb).
 
-export const ROLE_NAME = { wolf: 'Sói', seer: 'Tiên tri', guard: 'Bảo vệ', witch: 'Phù thủy', hunter: 'Thợ săn', vill: 'Dân làng' };
+export const ROLE_NAME = { wolf: 'Sói', seer: 'Tiên tri', guard: 'Bảo vệ', witch: 'Phù thủy', hunter: 'Thợ săn', chief: 'Trưởng làng', vill: 'Dân làng' };
 export const DUR = { night: 20, day: 120, vote: 60, hunter: 20 };   // giây (mặc định)
 export const DAY_OPTIONS = [60, 120, 180, 300, 600];   // thời gian thảo luận ban ngày mà chủ phòng được chọn (giây), lưu ở room.dayTime
 export const durOf = (room, ph) => ph === 'day' && DAY_OPTIONS.includes(room && room.dayTime) ? room.dayTime : DUR[ph];
@@ -25,12 +25,12 @@ function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.fl
 
 export function assignRoles(ids) {
   const n = ids.length, wolves = n <= 5 ? 1 : n <= 8 ? 2 : n <= 12 ? 3 : n <= 16 ? 4 : 5;
-  const roles = Array(wolves).fill('wolf'); roles.push('seer'); if (n >= 6) roles.push('guard'); if (n >= 8) roles.push('witch'); if (n >= 10) roles.push('hunter');   // đông người thì thêm Phù thủy (từ 8), Thợ săn (từ 10)
+  const roles = Array(wolves).fill('wolf'); roles.push('seer'); if (n >= 6) roles.push('guard'); if (n >= 7) roles.push('chief'); if (n >= 8) roles.push('witch'); if (n >= 10) roles.push('hunter');   // đông người thì thêm Phù thủy (từ 8), Thợ săn (từ 10)
   while (roles.length < n) roles.push('vill');
   shuffle(roles); const out = {}; ids.forEach((id, i) => out[id] = roles[i]); return out;
 }
-export function tally(votes) {
-  const c = {}; Object.values(votes || {}).forEach(t => { if (t) c[t] = (c[t] || 0) + 1; });
+export function tally(votes, weight = () => 1) {   // weight(người bỏ phiếu) = số phiếu của người đó (Trưởng làng được 2)
+  const c = {}; Object.entries(votes || {}).forEach(([voter, t]) => { if (t) c[t] = (c[t] || 0) + weight(voter); });
   const max = Math.max(0, ...Object.values(c));
   return { top: Object.keys(c).filter(k => c[k] === max), max };
 }
@@ -49,7 +49,7 @@ export function tallyScores(wg) {   // -> mảng xếp hạng: nhiều ván th�
   for (const rec of Object.values(wg || {})) {
     if (!rec || !rec.p) continue;
     for (const [k, x] of Object.entries(rec.p)) {
-      const a = T[k] || (T[k] = { key: k, name: x.n, games: 0, wolf: 0, vill: 0, seer: 0, guard: 0, witch: 0, hunter: 0, win: 0, loss: 0 });
+      const a = T[k] || (T[k] = { key: k, name: x.n, games: 0, wolf: 0, vill: 0, seer: 0, guard: 0, witch: 0, hunter: 0, chief: 0, win: 0, loss: 0 });
       a.name = x.n; a.games++; if (a[x.r] != null) a[x.r]++;
       if ((x.r === 'wolf') === (rec.w === 'wolf')) a.win++; else a.loss++;
     }
@@ -217,7 +217,7 @@ function nightPlan(room, now) {
 function votePlan(room, now) {
   const players = room.players, roles = room.roles || {}, r = room.round, al = aliveIds(room);
   const v = {}; Object.entries(room.votes || {}).forEach(([id, t]) => { if (al.includes(id) && players[t] && players[t].alive) v[id] = t; });
-  const t = tally(v), u = { night: null, votes: null, ready: null };
+  const t = tally(v, id => roles[id] === 'chief' ? 2 : 1), u = { night: null, votes: null, ready: null };   // phiếu của Trưởng làng tính là 2
   let dead = null, announce, note;
   if (t.top.length === 1 && t.max > 0) { dead = t.top[0]; u['players/' + dead + '/alive'] = false; u['dead/' + dead] = true; announce = `Làng treo cổ ${players[dead].name}${room.hideRoles ? '.' : ` (${ROLE_NAME[roles[dead]]}).`}`;   /* hideRoles: chế độ không lộ vai khi chết */ }
   else announce = 'Phiếu hòa hoặc không ai bỏ phiếu, hôm nay không ai bị treo cổ.';

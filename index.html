@@ -123,7 +123,7 @@
   .role{cursor:pointer;user-select:none;text-align:center;padding:22px 16px;border-top:4px solid var(--line)}
   .role .big{font-size:34px;font-weight:700;margin:2px 0}
   .role.wolf{border-top-color:var(--red)} .role.seer{border-top-color:var(--amber)} .role.guard{border-top-color:var(--green)} .role.vill{border-top-color:var(--pri)}
-  .role.witch{border-top-color:#7c3aed} .role.hunter{border-top-color:#ea580c} .t-witch{color:#7c3aed} .t-hunter{color:#c2410c}
+  .role.witch{border-top-color:#7c3aed} .role.hunter{border-top-color:#ea580c} .role.chief{border-top-color:#ca8a04} .t-chief{color:#a16207} .t-witch{color:#7c3aed} .t-hunter{color:#c2410c}
   .t-wolf{color:var(--red)} .t-seer{color:var(--amber-text)} .t-guard{color:var(--green)} .t-vill{color:var(--pri)}
   .pulse{animation:pulse 1.4s ease-in-out infinite}
   @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(19,113,226,.45)}50%{box-shadow:0 0 0 8px rgba(19,113,226,0)}}
@@ -195,7 +195,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126af';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126ah';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -260,6 +260,7 @@ const ROLE_HINT = {
   seer: 'Mỗi đêm soi một người xem có phải Sói không.',
   guard: 'Mỗi đêm bảo vệ một người (kể cả bạn) khỏi bị cắn.',
   witch: 'Có 1 thuốc cứu và 1 thuốc độc, mỗi loại chỉ dùng một lần cả ván. Mỗi đêm bạn biết ai bị Sói cắn.',
+  chief: 'Lá phiếu treo cổ của bạn được tính là 2 phiếu. Bạn không có khả năng đặc biệt nào khác.',
   hunter: 'Khi bạn bị loại (bị cắn hoặc bị treo cổ) bạn được bắn chết một người. Bị đầu độc thì không bắn được.',
   vill: 'Ban ngày thảo luận và bỏ phiếu treo cổ Sói.'
 };
@@ -566,11 +567,12 @@ function helpHTML() {
     <li>🐺 <b>Sói</b>: mỗi đêm cùng đồng bọn chọn một người để cắn.</li>
     <li>🔮 <b>Tiên tri</b>: mỗi đêm soi một người, biết người đó có phải Sói không.</li>
     <li>🛡️ <b>Bảo vệ</b>: mỗi đêm che chở một người (kể cả mình). Sói cắn đúng người đó thì họ vẫn sống.</li>
+    <li>👑 <b>Trưởng làng</b> (từ 7 người): không có khả năng đặc biệt, nhưng khi bỏ phiếu treo cổ lá phiếu của Trưởng làng được tính là <b>2 phiếu</b>.</li>
     <li>🧙 <b>Phù thủy</b> (từ 8 người): có 1 thuốc cứu và 1 thuốc độc, mỗi loại dùng một lần cả ván. Mỗi đêm biết ai bị Sói cắn: có thể cứu người đó, hoặc đầu độc một người bất kỳ (Bảo vệ không cản được thuốc độc).</li>
     <li>🏹 <b>Thợ săn</b> (từ 10 người): khi bị loại (bị cắn hoặc bị treo cổ) được bắn chết một người trước khi gục (có ${DUR.hunter} giây chọn). Bị đầu độc thì không bắn được.</li>
     <li>🧑‍🌾 <b>Dân làng</b>: không có khả năng đặc biệt, dùng lời nói và lá phiếu.</li>
   </ul>
-  <p class="note">${MIN}–5 người có 1 Sói; 6–8 có 2 Sói và thêm Bảo vệ; 8 người trở lên thêm Phù thủy; 9–12 có 3 Sói; 10 người trở lên thêm Thợ săn; 13–16 có 4 Sói; 17–${MAX} có 5 Sói. Luôn có 1 Tiên tri. Phòng ${MIN}–${MAX} người.</p>
+  <p class="note">${MIN}–5 người có 1 Sói; 6–8 có 2 Sói và thêm Bảo vệ; 7 người trở lên thêm Trưởng làng; 8 người trở lên thêm Phù thủy; 9–12 có 3 Sói; 10 người trở lên thêm Thợ săn; 13–16 có 4 Sói; 17–${MAX} có 5 Sói. Luôn có 1 Tiên tri. Phòng ${MIN}–${MAX} người.</p>
   <h3>🔁 Một vòng chơi</h3>
   <ol>
     <li>Vào phòng, nhập tên, bấm <b>Sẵn sàng</b>. Mọi người sẵn sàng thì ván tự bắt đầu. Thiếu người mà chờ ${LOBBY_WAIT} giây không ai vào thì tự thêm người máy.</li>
@@ -686,7 +688,7 @@ function todo() {   // một câu nói rõ "bây giờ bạn cần làm gì"
     return ['😴 Trời tối rồi, bạn đi ngủ. Chờ trời sáng nhé.', true];
   }
   if (S.phase === 'day') return (S.ready || {})[me.pid] ? ['Đã sẵn sàng. Chờ mọi người…', true] : [S.round === 0 ? '☀️ Mở đầu ván: làm quen, trò chuyện trong khung chat (chưa có ai chết, chưa bỏ phiếu). Xong thì bấm “Sẵn sàng sang đêm 1”.' : '☀️ Nói chuyện trong khung chat để tìm Sói. Xong thì bấm “Sẵn sàng bỏ phiếu”.', false];
-  if (S.phase === 'vote') return (S.votes || {})[me.pid] ? ['Đã bỏ phiếu. Chờ mọi người…', true] : ['🗳️ Chọn người bạn nghĩ là Sói rồi bấm “Xác nhận”.', false];
+  if (S.phase === 'vote') return (S.votes || {})[me.pid] ? ['Đã bỏ phiếu. Chờ mọi người…', true] : [my === 'chief' ? '🗳️ Bạn là Trưởng làng: phiếu của bạn tính là 2. Chọn người bạn nghĩ là Sói rồi bấm “Xác nhận”.' : '🗳️ Chọn người bạn nghĩ là Sói rồi bấm “Xác nhận”.', false];
   return ['', true];
 }
 const todoHTML = () => { const [t, dim] = todo(); return t ? `<div class="todo ${dim ? 'dim' : ''}">${t}</div>` : ''; };
@@ -729,7 +731,7 @@ function specHTML() {
 /* ---------- Màn hình ván chơi ---------- */
 function rolesSummary() {   // ván này có những vai gì (số lượng ban đầu, công khai như người quản trò vẫn đọc to đầu ván)
   const c = {}; Object.values(S.roles || {}).forEach(r => c[r] = (c[r] || 0) + 1);
-  const ic = { wolf: '🐺', seer: '🔮', guard: '🛡️', witch: '🧙', hunter: '🏹', vill: '🧑‍🌾' }, txt = ['wolf', 'seer', 'guard', 'witch', 'hunter', 'vill'].filter(r => c[r]).map(r => `${ic[r]} ${c[r]} ${ROLE_NAME[r]}`).join(' · ');
+  const ic = { wolf: '🐺', seer: '🔮', guard: '🛡️', witch: '🧙', hunter: '🏹', chief: '👑', vill: '🧑‍🌾' }, txt = ['wolf', 'seer', 'guard', 'chief', 'witch', 'hunter', 'vill'].filter(r => c[r]).map(r => `${ic[r]} ${c[r]} ${ROLE_NAME[r]}`).join(' · ');
   return txt ? `<div class="card" style="padding:10px 16px;font-weight:600">📋 Ván này có: ${txt}</div>` : '';
 }
 function wolfMatesHTML() {
@@ -740,7 +742,7 @@ function wolfMatesHTML() {
 }
 function recapHTML() {   // diễn biến ván (cập nhật suốt ván)
   const L = S.log || {}, ks = Object.keys(L).sort();
-  return ks.length ? `<div class="card" id="recap" style="max-height:210px;overflow-y:auto"><div class="sec">📜 Diễn biến ván</div>${ks.map(k => `<div class="note" style="margin:4px 0">${k === '999' ? '' : `<b>${{ 1: '🌙 Đêm ' + +k.slice(0, 2), 2: '🏹 Thợ săn', 3: '☀️ Ngày ' + +k.slice(0, 2), 4: '🏹 Thợ săn' }[k[2]]}:</b> `}${k === '999' ? `<b>${esc(L[k])}</b>` : esc(L[k]).replace(/\n/g, ' ')}</div>`).join('')}</div>` : '';
+  return ks.length ? `<div class="card" id="recap" style="max-height:210px;overflow-y:auto"><div class="sec">📜 Diễn biến ván</div>${ks.map(k => `<div class="note" style="margin:4px 0">${k === '999' ? '' : `<b>${k.startsWith('00') ? (k % 2 ? '🌙 Đêm ' + (Math.floor(k / 2) + 1) : '☀️ Ngày ' + (k / 2)) : { 1: '🌙 Đêm ' + +k.slice(0, 2), 2: '🏹 Thợ săn', 3: '☀️ Ngày ' + +k.slice(0, 2), 4: '🏹 Thợ săn' }[k[2]]}:</b> `}${k === '999' ? `<b>${esc(L[k])}</b>` : esc(L[k]).replace(/\n/g, ' ')}</div>`).join('')}</div>` : '';
 }
 let witchOpen = false;   // đang mở bảng chọn người để đầu độc
 function witchHTML() {
@@ -790,7 +792,7 @@ function gameHTML() {
   } else if (S.phase === 'vote') {
     const v = S.votes || {}, cnt = alive.filter(id => v[id]).length;
     if (!iAlive) out += '<div class="card note">Bạn đã chết, không được bỏ phiếu.</div>';
-    else out += v[me.pid] ? `<div class="card">Bạn đã bỏ phiếu cho <b>${esc(p[v[me.pid]].name)}</b>.</div>` : picker(alive.filter(id => id !== me.pid), 'vote', 'Bỏ phiếu treo cổ');
+    else out += v[me.pid] ? `<div class="card">Bạn đã bỏ phiếu cho <b>${esc(p[v[me.pid]].name)}</b>.</div>` : picker(alive.filter(id => id !== me.pid), 'vote', myRole === 'chief' ? '👑 Bỏ phiếu treo cổ (lá phiếu của Trưởng làng tính là 2)' : 'Bỏ phiếu treo cổ');
     out += `<p class="note" style="text-align:center">Đã bỏ phiếu: ${cnt}/${alive.length}</p>`;
   } else if (S.phase === 'end') {
     out += `<div class="card ann"><b>${esc(S.winner || '')}</b><div class="row" style="justify-content:center;margin-top:12px"><button class="primary" id="againbtn" data-act="again" style="min-width:180px">Chơi ván mới</button><button data-act="toSpec">👀 Xuống khán đài</button><button class="ghost" data-act="leave">Thoát khỏi phòng</button></div></div>`;
@@ -1614,7 +1616,7 @@ document.addEventListener('click', e => {
 let wgRaw = null, wgUnwatch = null;
 function wgCardHTML() {
   const t = tallyScores(wgRaw), top = t.slice(0, 20), medal = i => ['🥇', '🥈', '🥉'][i] || i + 1;
-  return `<div class="card" id="wgcard"><div class="sec">🏆 Bảng thành tích Ma sói</div>${top.length ? `<div style="overflow-x:auto"><table class="rank"><thead><tr><th>#</th><th>Tên</th><th>Ván</th><th>🐺 Sói</th><th>🧑‍🌾 Dân</th><th>🔮 Tiên tri</th><th>🛡️ Bảo vệ</th><th>🧙 Phù thủy</th><th>🏹 Thợ săn</th><th>Thắng</th><th>Thua</th><th>Tỉ lệ</th></tr></thead><tbody>${top.map((x, i) => `<tr class="${homeName && x.key === scoreKeyOf(homeName) ? 'me' : ''}"><td>${medal(i)}</td><td><b>${esc(x.name)}</b></td><td>${x.games}</td><td>${x.wolf}</td><td>${x.vill}</td><td>${x.seer}</td><td>${x.guard}</td><td>${x.witch || 0}</td><td>${x.hunter || 0}</td><td><b>${x.win}</b></td><td>${x.loss}</td><td>${Math.round(100 * x.win / x.games)}%</td></tr>`).join('')}</tbody></table></div>`
+  return `<div class="card" id="wgcard"><div class="sec">🏆 Bảng thành tích Ma sói</div>${top.length ? `<div style="overflow-x:auto"><table class="rank"><thead><tr><th>#</th><th>Tên</th><th>Ván</th><th>🐺 Sói</th><th>🧑‍🌾 Dân</th><th>🔮 Tiên tri</th><th>🛡️ Bảo vệ</th><th>🧙 Phù thủy</th><th>🏹 Thợ săn</th><th>👑 Trưởng làng</th><th>Thắng</th><th>Thua</th><th>Tỉ lệ</th></tr></thead><tbody>${top.map((x, i) => `<tr class="${homeName && x.key === scoreKeyOf(homeName) ? 'me' : ''}"><td>${medal(i)}</td><td><b>${esc(x.name)}</b></td><td>${x.games}</td><td>${x.wolf}</td><td>${x.vill}</td><td>${x.seer}</td><td>${x.guard}</td><td>${x.witch || 0}</td><td>${x.hunter || 0}</td><td>${x.chief || 0}</td><td><b>${x.win}</b></td><td>${x.loss}</td><td>${Math.round(100 * x.win / x.games)}%</td></tr>`).join('')}</tbody></table></div>`
     : '<div class="note">Chưa có ván nào được ghi. Chơi xong một ván (có từ 2 người thật trở lên) là có tên ở đây.</div>'}
     <div class="note" style="margin-top:8px">Xếp theo số ván thắng; bằng nhau thì ai chơi nhiều ván hơn xếp trên. Người máy và ván chỉ có 1 người thật không tính. Tên được nhận bằng tên bạn nhập khi vào phòng.</div></div>`;
 }
@@ -1675,7 +1677,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261126af';
+const APP_V = '20261126ah';
 async function checkNewVersion() {
   try {
     const t = await (await fetch(location.pathname + '?_v=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/const APP_V = '([^']+)'/);
