@@ -153,8 +153,9 @@
   /* đồng hồ đếm ngược: giữ chỗ cố định và số cùng bề rộng để các dòng bên dưới không trồi lên thụt xuống mỗi giây */
   #fillhint{min-height:2.8em;font-variant-numeric:tabular-nums} #cd{min-width:78px;justify-content:center;font-variant-numeric:tabular-nums}
   .cols.chat2{grid-template-columns:minmax(0,5fr) minmax(0,7fr)} .cols.chat2>.stack:last-child{align-self:stretch}
-  .chatpair{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:start;position:sticky;top:68px}
+  .chatpair{display:grid;grid-template-columns:repeat(var(--n,2),minmax(0,1fr));gap:12px;align-items:start;position:sticky;top:68px}
   .chatpair .chat.sm,.chatpair .chat.sm.day,.chatpair .chat.sm.dead,.chatpair .chat.sm.wolf{height:min(640px,calc(100vh - 150px));margin-bottom:0}
+  .chatpair.three{position:static} .chatpair.three .chat.sm.wolf{grid-column:1 / -1;height:min(380px,60vh)}
   .chatrow{display:flex;gap:8px} .chatrow input{height:42px}
   .chatrow button{min-width:64px}
 
@@ -201,7 +202,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126as';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126au';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -739,7 +740,7 @@ function specHTML() {
   if (S.phase === 'lobby') out += lastGameHTML();
   out += `<div class="card"><div class="sec">👀 Khán đài (${specs.length} khán giả)</div>${specs.map(x => esc(x.name)).join(', ')}</div>`;
   const chatH = chatHTML();
-  return `<div class="cols ${chatH.includes('chatpair') ? 'chat2' : ''}"><div class="stack">${out}</div><div class="stack">${chatH}<button class="ghost" data-act="leave">Rời phòng</button></div></div>`;
+  return `<div class="cols ${chatH.includes('chatpair') ? 'chat2' : ''}"><div class="stack">${out}</div><div class="stack"><button class="ghost" data-act="leave">Rời phòng</button>${chatH}</div></div>`;
 }
 
 /* ---------- Màn hình ván chơi ---------- */
@@ -838,7 +839,7 @@ function gameHTML() {
   out += `<div class="card"><div class="sec">Người chơi</div>${playersGrid(S.phase === 'end', false)}</div>`;
   if (S.log) out += roleCard;
   const chatH = chatHTML();
-  return `<div class="cols ${chatH.includes('chatpair') ? 'chat2' : ''}"><div class="stack">${out}</div><div class="stack">${chatH}${S.host === me.pid ? specBtn() : ''}${S.phase === 'end' ? '' : '<button class="ghost" data-act="leave">Thoát khỏi phòng</button>'}</div></div>`;
+  return `<div class="cols ${chatH.includes('chatpair') ? 'chat2' : ''}"><div class="stack">${out}</div><div class="stack">${S.host === me.pid ? specBtn() : ''}${S.phase === 'end' ? '' : '<button class="ghost" data-act="leave">Thoát khỏi phòng</button>'}${chatH}</div></div>`;
 }
 
 /* ============ Chat ============ */
@@ -899,9 +900,10 @@ function chatSplit() {
   const p = S.players || {}, mine = (S.roles || {})[me.pid], alive = p[me.pid] && p[me.pid].alive;
   const chs = me.spec ? ['day', 'wolf', 'dead'] : ['day'];   // khán giả đọc được cả ba khung (chỉ đọc); ở khung Sói tên được thay bằng Sói 1, Sói 2…
   if (!me.spec) { if (mine === 'wolf') chs.push('wolf'); if (!alive) chs.push('dead'); }
-  if (S.phase === 'night' && chs.includes('wolf')) chs.unshift(chs.splice(chs.indexOf('wolf'), 1)[0]);   // đêm: khung Sói lên đầu
+  if (chs.length === 3) chs.splice(0, 3, 'day', 'dead', 'wolf');   // đủ ba khung (người chết là Sói, hoặc khán giả): Chung và Người chết cạnh nhau, khung Sói nằm dưới
+  else if (S.phase === 'night' && chs.includes('wolf')) chs.unshift(chs.splice(chs.indexOf('wolf'), 1)[0]);   // đêm: khung Sói lên đầu
   const boxes = chs.map(chatBox).join('');
-  return chs.length > 1 ? `<div class="chatpair">${boxes}</div>` : boxes;   // từ 2 khung trở lên: xếp ngang nhau, đứng yên khi cuộn trang
+  return chs.length > 1 ? `<div class="chatpair ${chs.length === 3 ? 'three' : ''}" style="--n:${Math.min(chs.length, 2)}">${boxes}</div>` : boxes;   // từ 2 khung trở lên: xếp ngang nhau, đứng yên khi cuộn trang
 }
 function chatHTML() {   // phòng chờ và khán đài (đang chơi): một khung gộp; đang chơi: các khung tách riêng; hết ván: chỉ còn một khung chat chung
   if (S.phase === 'end') return chatBox('day');
@@ -1718,7 +1720,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261126as';
+const APP_V = '20261126au';
 async function checkNewVersion() {
   try {
     const t = await (await fetch(location.pathname + '?_v=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/const APP_V = '([^']+)'/);
