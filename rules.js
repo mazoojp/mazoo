@@ -4,7 +4,9 @@
 // "Backend" B là đối tượng có: get(path), set(path, value), update({path: value}), watch(path, cb).
 
 export const ROLE_NAME = { wolf: 'Sói', seer: 'Tiên tri', guard: 'Bảo vệ', vill: 'Dân làng' };
-export const DUR = { night: 45, day: 120, vote: 60 };   // giây
+export const DUR = { night: 45, day: 120, vote: 60 };   // giây (mặc định)
+export const DAY_OPTIONS = [60, 120, 180, 300, 600];   // thời gian thảo luận ban ngày mà chủ phòng được chọn (giây), lưu ở room.dayTime
+export const durOf = (room, ph) => ph === 'day' && DAY_OPTIONS.includes(room && room.dayTime) ? room.dayTime : DUR[ph];
 export const MIN = 4, MAX = 12;
 export const AGAIN_LOCK = 8;   // giây: hết ván phải chờ chừng này mới bấm được "Chơi ván mới" (để mọi người kịp xem kết quả, không bị một người bấm kéo cả phòng về phòng chờ)
 export const LOBBY_WAIT = 60;   // giây: thiếu người mà không ai vào thêm thì tự thêm người máy
@@ -129,7 +131,7 @@ function nightPlan(room, now) {
   if (!target || saved) { announce = 'Đêm qua yên bình, không ai chết.'; note = 'Không ai chết.'; }
   else { dead = target; u['players/' + dead + '/alive'] = false; announce = `Đêm qua ${players[dead].name} đã bị Sói cắn chết.`; note = `${players[dead].name} bị Sói cắn chết.`; }
   const win = winnerOf(players, roles, dead);
-  if (win) { u.phase = 'end'; u.winner = win; u.deadline = null; } else { u.phase = 'day'; u.deadline = now + DUR.day * 1000; }
+  if (win) { u.phase = 'end'; u.winner = win; u.deadline = null; } else { u.phase = 'day'; u.deadline = now + durOf(room, 'day') * 1000; }
   u.announce = announce; u['log/' + logKey(2 * r - 1)] = note;
   if (win) { u.endedAt = now; u['log/999'] = '🏁 ' + win; }
   return { u };
@@ -160,7 +162,7 @@ export function planBots(room, now) {
   if (!room || !room.players || !room.roles || !room.deadline || !DUR[room.phase]) return null;
   const al = aliveIds(room), roles = room.roles, r = room.round, ph = room.phase;
   const bots = al.filter(id => room.players[id].bot); if (!bots.length) return null;
-  const el = now - (room.deadline - DUR[ph] * 1000), mem = room.botMem || {}, u = {};
+  const el = now - (room.deadline - durOf(room, ph) * 1000), mem = room.botMem || {}, u = {};
   if (ph === 'night') {
     const n = room.night || {};
     for (const b of bots) {

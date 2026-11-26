@@ -189,7 +189,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126e';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126g';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -430,6 +430,7 @@ function render() {
     chatTab = S.phase === 'night' && mine === 'wolf' && alive ? 'wolf' : (alive === false && S.phase !== 'end' ? 'dead' : 'day');
   }
   $app.innerHTML = shell(me.spec ? specHTML() : S.phase === 'lobby' ? lobbyHTML() : gameHTML());
+  const rc = document.getElementById('recap'); if (rc) rc.scrollTop = rc.scrollHeight;   // diễn biến ván: luôn cuộn tới dòng mới nhất
   document.querySelectorAll('.chatlist').forEach(l => { const o = scr[l.id]; l.scrollTop = !o || o.stick ? l.scrollHeight : o.top; });
   if (hadFocus) focusChat(caret, focusCh);
   updateClock();
@@ -531,7 +532,7 @@ function helpHTML() {
     <li>Vào phòng, nhập tên, bấm <b>Sẵn sàng</b>. Mọi người sẵn sàng thì ván tự bắt đầu. Thiếu người mà chờ ${LOBBY_WAIT} giây không ai vào thì tự thêm người máy.</li>
     <li>Chạm vào thẻ 🎴 để xem vai (đừng cho ai thấy).</li>
     <li>🌙 <b>Ban đêm (${DUR.night} giây)</b>: Sói, Tiên tri, Bảo vệ chọn mục tiêu. Dân làng chờ trời sáng.</li>
-    <li>☀️ <b>Ban ngày (${DUR.day} giây)</b>: biết ai chết, thảo luận trong chat để tìm Sói. Muốn sang bước tiếp thì bấm <b>Sẵn sàng bỏ phiếu</b>.</li>
+    <li>☀️ <b>Ban ngày (mặc định ${DUR.day} giây, chủ phòng chỉnh được 1–10 phút)</b>: biết ai chết, thảo luận trong chat để tìm Sói. Muốn sang bước tiếp thì bấm <b>Sẵn sàng bỏ phiếu</b>.</li>
     <li>🗳️ <b>Bỏ phiếu (${DUR.vote} giây)</b>: mỗi người chọn một người để treo cổ. Người nhiều phiếu nhất chết và lộ vai (trừ khi chủ phòng tắt “Lộ vai khi chết” ở phòng chờ). Hòa phiếu thì không ai chết.</li>
     <li>Lặp lại ban đêm cho đến khi một phe thắng.</li>
   </ol>
@@ -584,7 +585,7 @@ function homeHTML() {
       <div class="card"><div class="sec"><span class="yi">★</span>Một vòng chơi</div>
         <div class="cm">
           <div class="c"><div class="t">🌙 <b>Đêm ${DUR.night}s</b>: Sói, Tiên tri, Bảo vệ chọn mục tiêu.</div></div>
-          <div class="c"><div class="t">☀️ <b>Ngày ${DUR.day}s</b>: thảo luận trong chat.</div></div>
+          <div class="c"><div class="t">☀️ <b>Ngày ${DUR.day}s</b>: thảo luận trong chat (chỉnh được).</div></div>
           <div class="c"><div class="t">🗳️ <b>Bỏ phiếu ${DUR.vote}s</b>: treo cổ người bị nghi.</div></div>
           <div class="c"><div class="t">🏁 Hết Sói thì Dân thắng. Sói bằng hoặc hơn dân thì Sói thắng.</div></div>
           <div class="c"><div class="t note">Lỡ thoát giữa ván? Nhập đúng tên cũ và số phòng để vào lại.</div></div>
@@ -608,6 +609,8 @@ function playersGrid(withRole, forLobby) {
 
 /* ---------- Phòng chờ ---------- */
 const specOn = () => !S || S.allowSpec !== false;
+const fmtSec = n => n % 60 ? n + ' giây' : n / 60 + ' phút';
+const dayBtn = () => `<button data-act="cycleDay" title="Bấm để đổi thời gian thảo luận ban ngày (chỉ chủ phòng, ở phòng chờ)">☀️ Thảo luận: ${fmtSec(durOf(S, 'day'))}</button>`;
 const hideBtn = () => `<button data-act="toggleHide" title="Luật gốc: người chết lộ vai. Tắt đi thì vai người chết được giữ kín đến hết ván (căng hơn)">🎭 Lộ vai khi chết: ${S && S.hideRoles ? 'Tắt' : 'Bật'}</button>`;
 const specBtn = () => `<button data-act="toggleSpec" title="Cho phép người vào sau (phòng đầy hoặc đang chơi) ngồi xem">👀 Khán đài: ${specOn() ? 'Bật' : 'Tắt'}</button>`;
 function lobbyHTML() {
@@ -624,12 +627,12 @@ function lobbyHTML() {
       </div>
       <p class="note" style="text-align:center;margin-top:10px">${hint}</p>
       <p class="note" id="fillhint" style="text-align:center"></p>
-      <p class="note" style="text-align:center">🎭 Khi chết: ${S.hideRoles ? 'KHÔNG lộ vai (chế độ căng)' : 'lộ vai (luật gốc)'}</p>
+      <p class="note" style="text-align:center">☀️ Thảo luận ban ngày: <b>${fmtSec(durOf(S, 'day'))}</b> · 🎭 Khi chết: ${S.hideRoles ? 'KHÔNG lộ vai (chế độ căng)' : 'lộ vai (luật gốc)'}</p>
     </div>
     <div class="card"><div class="sec">Người chơi (${n}/${MAX})<span class="r">${rdy} đã sẵn sàng</span></div>${playersGrid(false, true)}
       <div class="row" style="margin-top:12px">
         ${host && n < MAX ? '<button data-act="addBot">🤖 Thêm người máy</button>' : ''}
-        ${host ? specBtn() + hideBtn() : ''}
+        ${host ? specBtn() + hideBtn() + dayBtn() : ''}
         ${host && can && rdy < n ? '<button class="primary" data-act="start">Bắt đầu ngay (chủ phòng)</button>' : ''}
       </div>
     </div>
@@ -679,11 +682,10 @@ function specHTML() {
   const PH = { lobby: ['⏳ Phòng chờ', 'mute'], night: ['🌙 Ban đêm', 'mute'], day: ['☀️ Ban ngày', 'amber'], vote: ['🗳️ Bỏ phiếu', 'red'], end: ['🏁 Kết thúc', 'green'] }[S.phase];
   const why = me.why === 'full' ? `Phòng đã đủ ${MAX} người nên bạn vào Khán đài.` : me.why === 'started' ? 'Ván đã bắt đầu nên bạn vào Khán đài.' : 'Bạn đang ở Khán đài.';
   let out = `<div class="status"><span class="chip ${PH[1]}">${PH[0]}</span>${S.phase !== 'lobby' ? `<span class="chip mute">Đêm thứ ${S.round}</span>` : ''}<span class="chip" id="cd"></span><span class="chip mute">${alive.length}/${Object.keys(p).length} còn sống</span></div>`;
-  out += rolesSummary();
+  out += recapHTML() + rolesSummary();
   out += `<div class="todo">👀 ${why} Khán giả thấy hết vai và hành động của mọi người nhưng không chat được.</div>`;
   if (S.announce) out += `<div class="card ann">${esc(S.announce).replace(/\n/g, '<br>')}</div>`;
   if (S.winner) out += `<div class="card ann"><b>${esc(S.winner)}</b></div>`;
-  out += recapHTML();
   if (S.phase === 'night') {
     const n = S.night || {}, wv = Object.entries(n.wolf || {});
     out += `<div class="card"><div class="sec">Hành động đêm nay</div>
@@ -717,14 +719,14 @@ function wolfMatesHTML() {
 }
 function recapHTML() {   // diễn biến ván (cập nhật suốt ván)
   const L = S.log || {}, ks = Object.keys(L).sort();
-  return ks.length ? `<div class="card"><div class="sec">📜 Diễn biến ván</div>${ks.map(k => `<div class="note" style="margin:4px 0">${k === '999' ? '' : `<b>${k % 2 ? '🌙 Đêm ' + (Math.floor(k / 2) + 1) : '☀️ Ngày ' + (k / 2)}:</b> `}${k === '999' ? `<b>${esc(L[k])}</b>` : esc(L[k]).replace(/\n/g, ' ')}</div>`).join('')}</div>` : '';
+  return ks.length ? `<div class="card" id="recap" style="max-height:210px;overflow-y:auto"><div class="sec">📜 Diễn biến ván</div>${ks.map(k => `<div class="note" style="margin:4px 0">${k === '999' ? '' : `<b>${k % 2 ? '🌙 Đêm ' + (Math.floor(k / 2) + 1) : '☀️ Ngày ' + (k / 2)}:</b> `}${k === '999' ? `<b>${esc(L[k])}</b>` : esc(L[k]).replace(/\n/g, ' ')}</div>`).join('')}</div>` : '';
 }
 function gameHTML() {
   const p = S.players || {}, roles = S.roles || {}, myRole = roles[me.pid], iAlive = p[me.pid] && p[me.pid].alive;
   const alive = Object.keys(p).filter(id => p[id].alive);
   const PH = { night: ['🌙 Ban đêm', 'mute'], day: ['☀️ Ban ngày', 'amber'], vote: ['🗳️ Bỏ phiếu', 'red'], end: ['🏁 Kết thúc', 'green'] }[S.phase];
   let out = `<div class="status"><span class="chip ${PH[1]}">${PH[0]}</span><span class="chip mute">Đêm thứ ${S.round}</span><span class="chip" id="cd"></span><span class="chip mute">${alive.length}/${Object.keys(p).length} còn sống</span>${S.hideRoles ? '<span class="chip mute">🎭 Ẩn vai khi chết</span>' : ''}${Object.keys(S.spectators || {}).length ? `<span class="chip mute">👀 ${Object.keys(S.spectators).length} khán giả</span>` : ''}</div>`;
-  out += rolesSummary() + todoHTML();
+  out += recapHTML() + rolesSummary() + todoHTML();   // diễn biến ván nằm trên đầu, cập nhật ngay trong lúc chơi
   out += `<div class="card role ${showRole && myRole ? myRole : ''} ${!roleSeen && myRole ? 'pulse' : ''}" data-act="toggleRole">${showRole && myRole
     ? `<div class="note">Vai của bạn</div><div class="big t-${myRole}">${ROLE_NAME[myRole]}</div><div class="note">${ROLE_HINT[myRole]}</div><div class="note" style="margin-top:6px">(bấm để ẩn)</div>`
     : `<div class="note">${roleSeen ? 'Bấm để xem lại vai (đừng cho người khác thấy)' : '👆 Bấm vào đây để xem vai của bạn (đừng cho người khác thấy)'}</div><div class="big">🎴</div>`}</div>`;
@@ -755,7 +757,6 @@ function gameHTML() {
   } else if (S.phase === 'end') {
     out += `<div class="card ann"><b>${esc(S.winner || '')}</b><div class="row" style="justify-content:center;margin-top:12px"><button class="primary" id="againbtn" data-act="again" style="min-width:180px">Chơi ván mới</button></div></div>`;
   }
-  out += recapHTML();   // diễn biến ván: cập nhật ngay trong lúc chơi
   out += `<div class="card"><div class="sec">Người chơi</div>${playersGrid(S.phase === 'end', false)}</div>`;
   return `<div class="cols"><div class="stack">${out}</div><div class="stack">${chatHTML()}${S.host === me.pid ? specBtn() : ''}<button class="ghost" data-act="leave">Thoát khỏi phòng</button></div></div>`;
 }
@@ -1511,6 +1512,7 @@ document.addEventListener('click', e => {
   }
   if (a === 'join') { game === 'caro' ? caroJoin() : joinOrCreate(); } else if (a === 'leave') { game === 'caro' ? caroLeave() : leave(); }
   else if (a === 'home') { if (game === 'ngu') { nguSave(); (async () => { if (NCm) await ncLeave(); game = 'masoi'; render(); })(); } else if (game === 'gchat') { gcStop(); game = 'masoi'; render(); } else if (game === 'donate' || game === 'menu') { game = 'masoi'; render(); } else if (game === 'caro') { if (cme) caroLeave(); } else if (me) leave(); }
+  else if (a === 'cycleDay') { if (S && S.host === me.pid && S.phase === 'lobby') B.set(base() + 'dayTime', DAY_OPTIONS[(DAY_OPTIONS.indexOf(durOf(S, 'day')) + 1) % DAY_OPTIONS.length]); }
   else if (a === 'toggleHide') { if (S && S.host === me.pid && S.phase === 'lobby') B.set(base() + 'hideRoles', !S.hideRoles); }
   else if (a === 'toggleSpec') { if (S && S.host === me.pid) B.set(base() + 'allowSpec', !specOn()); }
   else if (a === 'side') { sideOpen = !sideOpen; render(); }
