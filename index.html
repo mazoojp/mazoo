@@ -185,7 +185,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js';
+import { ROLE_NAME, MIN, MAX, DUR, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -223,6 +223,7 @@ async function makeBackend() {
     const { initializeApp } = await import(`https://www.gstatic.com/firebasejs/${V}/firebase-app.js`);
     const m = await import(`https://www.gstatic.com/firebasejs/${V}/firebase-database.js`);
     const db = m.getDatabase(initializeApp(cfg));
+    m.onValue(m.ref(db, '.info/serverTimeOffset'), s => { TOFF = s.val() || 0; });   // lệch giữa đồng hồ máy này và máy chủ Firebase
     return {
       mode: 'firebase',
       get: async p => (await m.get(m.ref(db, p))).val(),
@@ -248,7 +249,9 @@ const ROLE_HINT = {
   guard: 'Mỗi đêm bảo vệ một người (kể cả bạn) khỏi bị cắn.',
   vill: 'Ban ngày thảo luận và bỏ phiếu treo cổ Sói.'
 };
-let B, S = null, unwatch = null, botBeat = 0, beatLoaded = false;
+let TOFF = 0;
+const tnow = () => Date.now() + TOFF;   // giờ theo máy chủ Firebase: đồng hồ điện thoại lệch vài chục giây không còn làm bot/chủ phòng xoá nhầm người khỏi phòng chờ
+let B, S = null, unwatch = null, botBeat = 0, beatLoaded = false, lastReadd = 0;
 let cDraft = '', auth = null, authName = '', authPass = '', authErr = '', authBusy = false, rankData = null, rankLoading = false, showRank = false, donateOk = false, msgName = '', msgText = '', msgStatus = '', msgSentAt = 0;
 let game = 'masoi', C = null, cme = null, cUnwatch = null, cSig = '', cBeatSent = false;
 let me = null;
@@ -267,7 +270,7 @@ function newCode() { const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; f
 /* ============ Vào / rời phòng ============ */
 const CODE_RE = /^[A-Z0-9]{2,8}$/;
 const ONLINE_MS = 30000;   // quá 30 giây không có nhịp tim thì coi là đã ngắt kết nối
-const isOnline = (room, pid) => { const t = (room.seen || {})[pid]; return !!t && Date.now() - t < ONLINE_MS; };
+const isOnline = (room, pid) => { const t = (room.seen || {})[pid]; return !!t && tnow() - t < ONLINE_MS; };
 async function joinOrCreate() {   // phòng có sẵn thì vào, chưa có thì tạo phòng mới với đúng số phòng đó
   const name = homeName.trim(), code = homeCode.replace(/\s+/g, '').toUpperCase();
   if (!name) return setErr('Nhập tên của bạn.');
@@ -276,7 +279,7 @@ async function joinOrCreate() {   // phòng có sẵn thì vào, chưa có thì 
   const room = await B.get('rooms/' + code);
   if (!room) {
     const pid = rid();
-    await B.set('rooms/' + code, { host: pid, phase: 'lobby', round: 0, createdAt: Date.now(), allowSpec: true, players: { [pid]: { name, alive: true, t: Date.now() } }, seen: { [pid]: Date.now() } });
+    await B.set('rooms/' + code, { host: pid, phase: 'lobby', round: 0, createdAt: tnow(), allowSpec: true, players: { [pid]: { name, alive: true, t: tnow() } }, seen: { [pid]: tnow() } });
     return enter({ pid, name, code });
   }
   const players = room.players || {};
@@ -299,12 +302,12 @@ async function joinOrCreate() {   // phòng có sẵn thì vào, chưa có thì 
     return joinSpec(code, name, 'full');
   }
   const pid = rid();
-  await B.update({ ['rooms/' + code + '/players/' + pid]: { name, alive: true, t: Date.now() }, ['rooms/' + code + '/seen/' + pid]: Date.now() });
+  await B.update({ ['rooms/' + code + '/players/' + pid]: { name, alive: true, t: tnow() }, ['rooms/' + code + '/seen/' + pid]: tnow() });
   enter({ pid, name, code });
 }
 async function joinSpec(code, name, why) {   // người xem: không nằm trong danh sách người chơi, thấy hết, không chat được
   const pid = rid();
-  await B.set('rooms/' + code + '/spectators/' + pid, { name, t: Date.now() });
+  await B.set('rooms/' + code + '/spectators/' + pid, { name, t: tnow() });
   enter({ pid, name, code, spec: true, why });
 }
 function setErr(m) { homeErr = m; render(); }
@@ -316,8 +319,9 @@ function enter(m) {
     S = v;
     if (!S) { leaveLocal(); render(); return; }
     if (!beatSent) { beatSent = true; beat(); }
-    if (!leavingNow && !me.spec && S.phase === 'lobby' && S.players && !S.players[me.pid] && me.name) {   // bị dọn nhầm (tab nền lâu): tự vào lại phòng chờ
-      B.update({ ['rooms/' + me.code + '/players/' + me.pid]: { name: me.name, alive: true, t: Date.now() }, ['rooms/' + me.code + '/seen/' + me.pid]: Date.now() });
+    if (!leavingNow && !me.spec && S.phase === 'lobby' && S.players && !S.players[me.pid] && me.name && Date.now() - lastReadd > 4000) {   // bị dọn nhầm (tab nền lâu): tự vào lại phòng chờ (tối đa 1 lần/4 giây để không thành vòng lặp xoá-vào-xoá)
+      lastReadd = Date.now();
+      B.update({ ['rooms/' + me.code + '/players/' + me.pid]: { name: me.name, alive: true, t: tnow() }, ['rooms/' + me.code + '/seen/' + me.pid]: tnow() });
     }
     const sig = JSON.stringify(v, (k, x) => k === 'seen' ? undefined : x);   // nhịp tim của người khác không cần vẽ lại cả trang
     if (sig === lastSig) return;
@@ -331,7 +335,7 @@ function enter(m) {
   render();
 }
 let lastSig = '', beatSent = false;
-const beat = () => { if (me && !me.spec && S) B.set(base() + 'seen/' + me.pid, Date.now()); };   // nhịp tim: báo mình còn online
+const beat = () => { if (me && !me.spec && S) B.set(base() + 'seen/' + me.pid, tnow()); };   // nhịp tim: báo mình còn online
 setInterval(beat, 3000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) beat(); });   // quay lại tab: báo online ngay
 function leaveLocal() { if (unwatch) unwatch(); unwatch = null; S = null; me = null; store().removeItem('masoi_me'); }
@@ -340,7 +344,7 @@ async function addBot() {
   const pl = S.players || {}, used = Object.values(pl).map(p => p.name);
   if (Object.keys(pl).length >= MAX) return;
   const name = '🤖 ' + (BOT_NAMES.find(n => !used.includes('🤖 ' + n)) || 'Bot' + rid().slice(0, 3));
-  await B.set(base() + 'players/bot_' + rid(), { name, alive: true, t: Date.now(), bot: true, ready: true });
+  await B.set(base() + 'players/bot_' + rid(), { name, alive: true, t: tnow(), bot: true, ready: true });
 }
 let leavingNow = false;   // đang bấm Rời phòng: đừng tự vào lại phòng chờ
 async function leave() {
@@ -362,12 +366,12 @@ async function leave() {
 }
 
 /* ============ Lệnh gửi cho bot quản trò ============ */
-const sendCmd = type => B.set(base() + 'cmd', { type, by: me.pid, t: Date.now() });
+const sendCmd = type => B.set(base() + 'cmd', { type, by: me.pid, t: tnow() });
 const ready = () => B.set(base() + 'ready/' + me.pid, true);
 
 // Ai chạy luật? Có bot quản trò (masoi-bot) đang chạy thì bot lo. Không có bot (hoặc chế độ thử) thì máy của chủ phòng chạy luật.
 // Bot được coi là đang chạy nếu nhịp tim của nó (meta/botBeat) mới hơn 20 giây.
-const botAlive = () => beatLoaded && Date.now() - botBeat < 20000;
+const botAlive = () => beatLoaded && tnow() - botBeat < 20000;
 const hostShouldRun = () => B.mode === 'local' || (beatLoaded && !botAlive());
 // Người chạy luật: chủ phòng. Nếu máy chủ phòng ngừng (đóng tab, khóa máy, tab nền...) thì người thật online có tên vào phòng sớm nhất chạy thay,
 // để ván không đứng. Các bước luật đều idempotent nên hai máy cùng chạy cũng không sai.
@@ -380,16 +384,16 @@ function runnerId() {
 let hostBusy = false;
 async function tickHost() {
   if (!me || me.spec || !S || runnerId() !== me.pid || hostBusy || !hostShouldRun()) return;
-  hostBusy = true; try { await stepRoom(B, me.code, S, Date.now()); } finally { hostBusy = false; }
+  hostBusy = true; try { await stepRoom(B, me.code, S, tnow()); } finally { hostBusy = false; }
 }
 setInterval(() => { tickHost(); updateClock(); }, 1000);
 function updateClock() {
   const cd = document.getElementById('cd');
-  if (cd) cd.textContent = S && S.deadline ? '⏱ ' + Math.max(0, Math.ceil((S.deadline - Date.now()) / 1000)) + 's' : '';
+  if (cd) cd.textContent = S && S.deadline ? '⏱ ' + Math.max(0, Math.ceil((S.deadline - tnow()) / 1000)) + 's' : '';
   const fh = document.getElementById('fillhint');
   if (fh) {
     const at = S && S.phase === 'lobby' ? lobbyFillAt(S) : null, need = S ? MIN - Object.keys(S.players || {}).length : 0;
-    fh.textContent = at ? `Nếu không ai vào thêm, sau ${Math.max(0, Math.ceil((at - Date.now()) / 1000))} giây sẽ tự thêm ${need} người máy và bắt đầu.` : '';
+    fh.textContent = at ? `Nếu không ai vào thêm, sau ${Math.max(0, Math.ceil((at - tnow()) / 1000))} giây sẽ tự thêm ${need} người máy và bắt đầu.` : '';
   }
   const w = document.getElementById('botwarn');
   if (w) w.style.display = B.mode === 'firebase' && beatLoaded && !botAlive() ? '' : 'none';
@@ -401,7 +405,7 @@ const donateOn = () => window.SHOW_DONATE !== false;   // config.js: SHOW_DONATE
 function render() {
   if (game === 'donate' && !donateOn()) game = 'masoi';
   if (game === 'ngu' && !nguOn()) game = 'masoi';
-  if (game === 'menu') return $app.innerHTML = shell('<iframe src="latable.html?v=20261124b" title="LA TABLE" style="width:100%;height:calc(100vh - 24px);min-height:640px;border:0;border-radius:12px;background:#f6f2ea"></iframe>');
+  if (game === 'menu') return $app.innerHTML = shell('<iframe src="latable.html?v=20261123c" title="LA TABLE" style="width:100%;height:calc(100vh - 24px);min-height:640px;border:0;border-radius:12px;background:#f6f2ea"></iframe>');
   if (game === 'donate') return $app.innerHTML = shell(donateHTML());
   if (game === 'gchat') return gchatRender();
   if (game === 'ngu') return nguRender();

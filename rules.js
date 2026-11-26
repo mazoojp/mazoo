@@ -43,6 +43,9 @@ const aliveIds = room => Object.keys(room.players || {}).filter(id => room.playe
 /* ---------- Kế hoạch bước tiếp theo của một phòng ----------
    Trả về { u } với u là các khóa cập nhật tương đối so với rooms/<mã>/, hoặc null nếu chưa cần làm gì.
    Mọi giá trị là tuyệt đối (không tăng dần), nên chạy lặp hai lần vẫn ra cùng kết quả. */
+// Lần cuối người này còn sống. Bot ghi lại GIỜ CỦA BOT lúc nó thấy nhịp tim đổi giá trị (room.seenAt) nên đồng hồ điện thoại lệch bao nhiêu cũng không sao;
+// nơi nào không có seenAt (máy chủ phòng tự chạy luật) thì dùng giờ ghi trong nhịp tim như cũ.
+const lastAlive = (room, id) => (room.seenAt && room.seenAt[id]) || (room.seen || {})[id] || (room.players[id] || {}).t || 0;
 export const LOBBY_IDLE_MS = 10000;   // phòng chờ: 10 giây không có nhịp tim thì coi là đã thoát (máy gửi nhịp mỗi 3 giây; bị xóa nhầm thì tự vào lại)
 export function planStep(room, now) {
   if (!room || !room.players) return null;
@@ -58,7 +61,7 @@ export function planStep(room, now) {
   // 2) Phòng chờ: đủ người và tất cả đã bấm "Sẵn sàng" thì tự bắt đầu
   if (room.phase === 'lobby') {
     // Người đã thoát (quá LOBBY_IDLE_MS không có nhịp tim) thì bị xóa khỏi danh sách phòng chờ
-    const stale = Object.keys(room.players).filter(id => { const p = room.players[id]; return !p.bot && (!p.name || now - ((room.seen || {})[id] || p.t || 0) > LOBBY_IDLE_MS); });   // không tên = nút rác do bấm Sẵn sàng sau khi bị xóa
+    const stale = Object.keys(room.players).filter(id => { const p = room.players[id]; return !p.bot && (!p.name || now - lastAlive(room, id) > LOBBY_IDLE_MS); });   // không tên = nút rác do bấm Sẵn sàng sau khi bị xóa
     const keep = Object.keys(room.players).filter(id => !stale.includes(id));
     if (stale.length && keep.some(id => !room.players[id].bot)) {
       const u = {};
@@ -197,13 +200,26 @@ export async function stepRoom(B, code, room, now) {
 /* ---------- Bot quản trò: theo dõi mọi phòng, chạy luật, dọn phòng cũ ---------- */
 export function runBot(B, { log = console.log, now = () => Date.now(), maxAgeMs = 12 * 3600 * 1000 } = {}) {
   let rooms = {}, caroRooms = {}; const busy = {};
+  const track = {};   // track[mã][pid] = { v: giá trị nhịp tim lần trước, at: giờ bot thấy nó đổi }
+  const withSeenAt = (code, room) => {
+    if (!room || !room.players) return room;
+    const t = track[code] || (track[code] = {}), seenAt = {}, nw = now();
+    for (const id of Object.keys(room.players)) {
+      const v = (room.seen || {})[id], o = t[id];
+      if (!o) t[id] = { v, at: nw }; else if (o.v !== v) { o.v = v; o.at = nw; }
+      seenAt[id] = t[id].at;
+    }
+    for (const id of Object.keys(t)) if (!(id in room.players)) delete t[id];
+    return { ...room, seenAt };
+  };
   const tick = async () => {
     for (const [code, room] of Object.entries(caroRooms || {})) {   // dọn phòng cờ caro quá cũ
       if (room && room.createdAt && now() - room.createdAt > maxAgeMs && !busy['caro' + code]) {
         busy['caro' + code] = true; try { await B.set('caro/' + code, null); log('Xóa phòng caro cũ', code); } finally { busy['caro' + code] = false; }
       }
     }
-    for (const [code, room] of Object.entries(rooms || {})) {
+    for (const [code, raw] of Object.entries(rooms || {})) {
+      const room = withSeenAt(code, raw);
       if (busy[code]) continue;
       if (room && room.createdAt && now() - room.createdAt > maxAgeMs) { busy[code] = true; try { await B.set('rooms/' + code, null); log('Xóa phòng cũ', code); } finally { busy[code] = false; } continue; }
       if (!planAll(room, now())) continue;
