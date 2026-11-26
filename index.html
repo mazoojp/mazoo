@@ -190,7 +190,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126o';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126p';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -412,6 +412,7 @@ function updateClock() {
 const nguOn = () => window.SHOW_NGU !== false;   // config.js: SHOW_NGU = false thì ẩn tab Ngủ đêm
 const donateOn = () => window.SHOW_DONATE !== false;   // config.js: SHOW_DONATE = false thì ẩn tab Ủng hộ 1 bát ramen
 function render() {
+  syncGc();
   if (game === 'donate' && !donateOn()) game = 'masoi';
   if (game === 'ngu' && !nguOn()) game = 'masoi';
   if (game === 'menu') return $app.innerHTML = shell('<iframe src="latable.html?v=20261124b" title="LA TABLE" style="width:100%;height:calc(100vh - 24px);min-height:640px;border:0;border-radius:12px;background:#f6f2ea"></iframe>');
@@ -419,7 +420,7 @@ function render() {
   if (game === 'gchat') return gchatRender();
   if (game === 'ngu') return nguRender();
   if (game === 'caro') return caroRender();
-  if (!me) return $app.innerHTML = shell(homeHTML());
+  if (!me) { $app.innerHTML = shell(homeHTML()); gcStick(); return; }
   if (!S) return $app.innerHTML = shell('<div class="card">Đang vào phòng…</div>');
   // nhớ ô nhập chat và vị trí cuộn để không bị mất khi có tin mới
   const ae = document.activeElement, hadFocus = !!(ae && ae.dataset && ae.dataset.bind === 'chat'), caret = hadFocus ? ae.selectionStart : 0, focusCh = hadFocus ? ae.dataset.ch : '';
@@ -573,6 +574,7 @@ function homeHTML() {
       ${homeErr ? `<div class="err">${esc(homeErr)}</div>` : '<div class="note" style="margin-top:6px">Phòng đã có thì bạn vào chơi cùng. Chưa có thì phòng mới được tạo với số này.</div>'}
     </div>
     ${roomsCardHTML()}
+    ${gcCardHTML(true)}
     <div class="row2">
       <div class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><div class="sec" style="margin:0">Ma sói là gì?</div><button class="vm" data-act="help" style="margin:0">Xem thêm</button></div>
         <p style="font-size:14px">Trò chơi suy luận nhóm. Trong làng có vài <b>Sói</b> giả làm dân thường. Ban đêm Sói lén cắn chết một người, ban ngày cả làng thảo luận rồi bỏ phiếu treo cổ người bị nghi là Sói.</p>
@@ -901,7 +903,7 @@ const gcSaved = () => store().getItem('gchat_name') || '';
 function gcStart() {
   if (gcUnwatch) gcUnwatch();
   gcErr = '';
-  gcUnwatch = B.watchLast('gchat', GC_SHOW, v => { gcMsgs = v || {}; if (game === 'gchat') render(); });
+  gcUnwatch = B.watchLast('gchat', GC_SHOW, v => { gcMsgs = v || {}; gcRefresh(); });
   B.pruneOld('gchat', Date.now() - GC_KEEP_DAYS * 86400000).catch(() => {});
 }
 function gcStop() { if (gcUnwatch) gcUnwatch(); gcUnwatch = null; gcMsgs = {}; }
@@ -919,17 +921,35 @@ async function gcSend() {
   try { await B.set('gchat/' + id, { name, text, t: tnow() }); } catch (e) { gcErr = 'Chưa gửi được, thử lại sau.'; render(); }
   const i = document.querySelector('[data-bind=gchat]'); if (i) i.focus();
 }
-function gcHTML() {
+function gcListHTML() {
   const name = gcSaved(), msgs = Object.entries(gcMsgs).sort((a, b) => a[0] < b[0] ? -1 : 1);
   const tm = t => { const d = new Date(t), p = x => String(x).padStart(2, '0'); return (Date.now() - t > 86400000 ? p(d.getMonth() + 1) + '/' + p(d.getDate()) + ' ' : '') + p(d.getHours()) + ':' + p(d.getMinutes()); };
-  const list = msgs.length ? msgs.map(([, m]) => `<div class="msg"><span class="note" style="font-size:11px">${tm(m.t)}</span> <b style="${m.name === name ? '' : 'color:#009765'}">${esc(m.name || 'Ẩn danh')}:</b> ${esc(m.text)}</div>`).join('') : '<div class="note">Chưa có tin nhắn. Hãy là người đầu tiên!</div>';
-  return `<div class="stack"><div class="card chat" style="height:min(560px,70vh);position:static"><div class="sec">💬 Chat tổng <span class="note" style="font-weight:400">· mọi người chơi đều thấy · tin giữ ${GC_KEEP_DAYS} ngày</span></div>
-    <div id="gchatlist" style="flex:1;min-height:0;overflow-y:auto;background:#f9f9fb;border-radius:12px;padding:10px;margin-bottom:10px">${list}</div>
+  return msgs.length ? msgs.map(([, m]) => `<div class="msg"><span class="note" style="font-size:11px">${tm(m.t)}</span> <b style="${m.name === name ? '' : 'color:#009765'}">${esc(m.name || 'Ẩn danh')}:</b> ${esc(m.text)}</div>`).join('') : '<div class="note">Chưa có tin nhắn nào. Hãy là người nói đầu tiên!</div>';
+}
+function gcCardHTML(embedded) {   // khung chat tổng: dùng ở tab Chat tổng và nhúng ở trang chủ (dưới bảng Phòng đang mở)
+  const name = gcSaved();
+  return `<div class="card chat" style="height:${embedded ? 'min(420px,60vh)' : 'min(560px,70vh)'};position:static"><div class="sec">💬 Chat tổng <span class="note" style="font-weight:400">· mọi người chơi đều thấy · tin giữ ${GC_KEEP_DAYS} ngày</span></div>
+    <div id="gchatlist" style="flex:1;min-height:0;overflow-y:auto;background:#f9f9fb;border-radius:12px;padding:10px;margin-bottom:10px">${gcListHTML()}</div>
     ${name ? `<div class="note" style="margin-bottom:6px">Bạn là <b>${esc(name)}</b> · <a href="#" data-act="gchange" style="color:var(--pri)">đổi tên</a></div>
     <div class="chatrow"><input data-bind="gchat" maxlength="300" placeholder="Nhập tin nhắn…" value="${esc(gcDraft)}" autocomplete="off"><button class="primary" data-act="gsend">Gửi</button></div>`
     : `<div class="chatrow"><input data-bind="gname" maxlength="20" placeholder="Nhập tên của bạn để chat" value="${esc(gcName)}" autocomplete="off"><button class="primary" data-act="gname">Vào chat</button></div>`}
-    ${gcErr ? `<div class="err">${esc(gcErr)}</div>` : ''}</div>
+    ${gcErr ? `<div class="err">${esc(gcErr)}</div>` : ''}</div>`;
+}
+function gcHTML() {
+  return `<div class="stack">${gcCardHTML(false)}
     <div class="card"><p class="note">Không cần đăng nhập, chỉ cần một cái tên. Ai cũng có thể dùng tên bất kỳ nên đừng tin tuyệt đối vào tên người khác, và đừng ghi mật khẩu hay thông tin cá nhân.</p></div></div>`;
+}
+// Cập nhật tin mới: ở tab Chat tổng thì vẽ lại, ở trang chủ chỉ thay phần danh sách (không vẽ lại cả trang để không mất ô đang gõ)
+function gcRefresh() {
+  if (game === 'gchat') return render();
+  const l = document.getElementById('gchatlist'); if (!l) return;
+  const stick = l.scrollTop + l.clientHeight >= l.scrollHeight - 8, top = l.scrollTop;
+  l.innerHTML = gcListHTML(); l.scrollTop = stick ? l.scrollHeight : top;
+}
+const gcStick = () => { const l = document.getElementById('gchatlist'); if (l) l.scrollTop = l.scrollHeight; };
+function syncGc() {   // theo dõi chat tổng khi đang ở tab Chat tổng hoặc trang chủ Ma sói / Cờ caro
+  const want = game === 'gchat' || (game === 'masoi' && !me) || (game === 'caro' && !cme);
+  if (want && !gcUnwatch) gcStart(); else if (!want && gcUnwatch) gcStop();
 }
 function gchatRender() {
   const ae = document.activeElement, bind = ae && ae.dataset && ae.dataset.bind, caret = bind && ae.selectionStart != null ? ae.selectionStart : 0;
@@ -1371,6 +1391,7 @@ function caroRender() {
   const ae = document.activeElement, bind = ae && ae.dataset && ae.dataset.bind, caret = bind && ae.selectionStart != null ? ae.selectionStart : 0;
   const ol = document.getElementById('cchatlist'), stick = !ol || ol.scrollTop + ol.clientHeight >= ol.scrollHeight - 8, top = ol ? ol.scrollTop : 0;
   $app.innerHTML = shell(!cme ? caroHomeHTML() : !C ? '<div class="card">Đang vào phòng…</div>' : caroRoomHTML());
+  if (!cme) gcStick();
   const nl = document.getElementById('cchatlist'); if (nl) nl.scrollTop = stick ? nl.scrollHeight : top;
   if (bind) { const i = document.querySelector('[data-bind=' + bind + ']'); if (i && !i.disabled) { i.focus(); try { i.setSelectionRange(caret, caret); } catch (e) {} } }
   if (rankData === null && !rankLoading) loadRank();
@@ -1416,6 +1437,7 @@ function caroHomeHTML() {
     </div>`;
   return `<div class="stack">${top}
     ${roomsCardHTML()}
+    ${gcCardHTML(true)}
     <div class="cols">
       <div class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><div class="sec" style="margin:0">🏆 Bảng xếp hạng</div><button class="vm" data-act="rank" style="margin:0">Xem tất cả</button></div>${rankTable(10)}</div>
       <div class="stack">
