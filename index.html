@@ -150,6 +150,8 @@
   .msg.bub{display:flex;flex-direction:column;align-items:flex-start;margin:7px 0} .msg.bub .who{font-size:11px;color:var(--mute);margin:0 6px 2px} .msg.bub .tx{background:#fff;border:1px solid #e5e7eb;border-radius:14px 14px 14px 4px;padding:6px 11px;max-width:85%;overflow-wrap:anywhere}
   .msg.bub.mine{align-items:flex-end} .msg.bub.mine .tx{border-radius:14px 14px 4px 14px}   /* tin của mình vẫn nền trắng như của người khác, chỉ nằm bên phải */
   .rrow{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid #eceef2;border-radius:12px;margin-top:8px;flex-wrap:wrap} .rrow .rc{font-weight:800;font-size:18px;min-width:56px;color:var(--pri-text)} .rrow .ri{flex:1;min-width:160px;font-size:14px} .rrow .ri .note{font-size:12px}
+  /* đồng hồ đếm ngược: giữ chỗ cố định và số cùng bề rộng để các dòng bên dưới không trồi lên thụt xuống mỗi giây */
+  #fillhint{min-height:2.8em;font-variant-numeric:tabular-nums} #cd{min-width:78px;justify-content:center;font-variant-numeric:tabular-nums}
   .chatrow{display:flex;gap:8px} .chatrow input{height:42px}
   .chatrow button{min-width:64px}
 
@@ -196,7 +198,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126aj';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126ak';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -1678,7 +1680,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261126aj';
+const APP_V = '20261126ak';
 async function checkNewVersion() {
   try {
     const t = await (await fetch(location.pathname + '?_v=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/const APP_V = '([^']+)'/);
