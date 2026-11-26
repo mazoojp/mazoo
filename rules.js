@@ -185,7 +185,8 @@ function nightPlan(room, now) {
   const u = { night: null, votes: null, ready: null };
   if (seerId && n.seer && players[n.seer]) u['seerLog/' + r] = `Đêm ${r}: ${players[n.seer].name} ${roles[n.seer] === 'wolf' ? 'LÀ SÓI' : 'không phải Sói'}.`;
   let dead = null, announce, note;   // announce: thông báo đầu trang; note: dòng ngắn trong nhật ký diễn biến
-  if (!target || saved) { announce = 'Đêm qua yên bình, không ai chết.'; note = 'Không ai chết.'; }
+  if (!target) { announce = 'Đêm qua Sói không cắn ai nên không ai chết.'; note = 'Sói không cắn ai nên không ai chết.'; }
+  else if (saved) { announce = 'Đêm qua có người bị Sói cắn nhưng được Bảo vệ cứu nên không ai chết.'; note = 'Có người bị Sói cắn nhưng được Bảo vệ cứu nên không ai chết.'; }
   else { dead = target; u['players/' + dead + '/alive'] = false; u['dead/' + dead] = true; announce = `Đêm qua ${players[dead].name} đã bị Sói cắn chết.`; note = `${players[dead].name} bị Sói cắn chết.`; }
   const win = winnerOf(players, roles, dead);
   if (win) { u.phase = 'end'; u.winner = win; u.deadline = null; } else { u.phase = 'day'; u.deadline = now + durOf(room, 'day') * 1000; }
