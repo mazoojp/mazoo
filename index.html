@@ -190,7 +190,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126k';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126l';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -312,7 +312,7 @@ async function joinOrCreate() {   // phòng có sẵn thì vào, chưa có thì 
   await B.update({ ['rooms/' + code + '/players/' + pid]: { name, alive: true, t: tnow() }, ['rooms/' + code + '/seen/' + pid]: tnow() });
   enter({ pid, name, code });
 }
-async function joinSpec(code, name, why) {   // người xem: không nằm trong danh sách người chơi, thấy hết, không chat được
+async function joinSpec(code, name, why) {   // người xem: không nằm trong danh sách người chơi, chỉ thấy thông tin công khai, không chat được
   const pid = rid();
   await B.set('rooms/' + code + '/spectators/' + pid, { name, t: tnow() });
   enter({ pid, name, code, spec: true, why });
@@ -553,7 +553,7 @@ function helpHTML() {
     <li><b>Tiên tri</b>: đừng lộ vai quá sớm, Sói sẽ cắn bạn đầu tiên.</li>
     <li><b>Bảo vệ</b>: đoán xem Sói định cắn ai.</li>
     <li>Lỡ thoát giữa ván? Mở lại link, nhập <b>đúng tên cũ</b> và số phòng để vào lại (nếu mất mạng đột ngột, chờ khoảng 30 giây). Không dùng được tên của người đang chơi.</li>
-    <li>Phòng đã đủ người hoặc ván đã bắt đầu? Bạn vào <b>Khán đài</b> 👀: thấy hết vai, hành động và mọi kênh chat, nhưng không chat được. Chủ phòng có thể bật hoặc tắt Khán đài.</li>
+    <li>Phòng đã đủ người hoặc ván đã bắt đầu? Bạn vào <b>Khán đài</b> 👀: chỉ thấy thông tin công khai (ai còn sống, diễn biến, chat làng), không thấy vai hay hành động bí mật, và không chat được. Chủ phòng có thể bật hoặc tắt Khán đài.</li>
   </ul></div></div>`;
 }
 
@@ -688,24 +688,17 @@ function specHTML() {
   const why = me.why === 'full' ? `Phòng đã đủ ${MAX} người nên bạn vào Khán đài.` : me.why === 'started' ? 'Ván đã bắt đầu nên bạn vào Khán đài.' : 'Bạn đang ở Khán đài.';
   let out = `<div class="status"><span class="chip ${PH[1]}">${PH[0]}</span>${S.phase !== 'lobby' ? `<span class="chip mute">Đêm thứ ${S.round}</span>` : ''}<span class="chip" id="cd"></span><span class="chip mute">${alive.length}/${Object.keys(p).length} còn sống</span></div>`;
   out += rolesSummary() + recapHTML();
-  out += `<div class="todo">👀 ${why} Khán giả thấy hết vai và hành động của mọi người nhưng không chat được.</div>`;
+  out += `<div class="todo">👀 ${why} Khán giả chỉ thấy thông tin công khai (ai còn sống, ai đã chết, diễn biến, chat làng), không thấy vai của người đang chơi hay hành động bí mật, và không chat được.</div>`;
   if (S.announce) out += `<div class="card ann">${esc(S.announce).replace(/\n/g, '<br>')}</div>`;
   if (S.winner) out += `<div class="card ann"><b>${esc(S.winner)}</b></div>`;
-  if (S.phase === 'night') {
-    const n = S.night || {}, wv = Object.entries(n.wolf || {});
-    out += `<div class="card"><div class="sec">Hành động đêm nay</div>
-      <div>🐺 Sói: ${wv.length ? wv.map(([id, t]) => `${nm(id)} cắn ${nm(t)}`).join('; ') : '<span class="note">chưa chọn</span>'}</div>
-      <div>🔮 Tiên tri: ${n.seer ? 'soi ' + nm(n.seer) : '<span class="note">chưa chọn</span>'}</div>
-      <div>🛡️ Bảo vệ: ${n.guard ? 'bảo vệ ' + nm(n.guard) : '<span class="note">chưa chọn</span>'}</div></div>`;
-  } else if (S.phase === 'day') {
+  if (S.phase === 'day') {
     const rd = S.ready || {};
     out += `<div class="card"><div class="sec">Sẵn sàng bỏ phiếu</div>${alive.filter(id => rd[id]).length}/${alive.length} người đã sẵn sàng</div>`;
   } else if (S.phase === 'vote') {
-    const v = Object.entries(S.votes || {});
-    out += `<div class="card"><div class="sec">Phiếu bầu (${v.length}/${alive.length})</div>${v.length ? v.map(([id, t]) => `<div>${nm(id)} → ${nm(t)}</div>`).join('') : '<span class="note">chưa ai bỏ phiếu</span>'}</div>`;
+    const v = Object.keys(S.votes || {});
+    out += `<div class="card"><div class="sec">Bỏ phiếu</div>${v.length}/${alive.length} người đã bỏ phiếu</div>`;
   }
-  if (S.seerLog) out += `<div class="card"><div class="sec">🔮 Kết quả soi</div>${Object.keys(S.seerLog).sort((a, b) => a - b).map(k => `<div>${esc(S.seerLog[k])}</div>`).join('')}</div>`;
-  out += `<div class="card"><div class="sec">Người chơi<span class="r">thấy cả vai</span></div>${playersGrid(S.phase !== 'lobby', S.phase === 'lobby')}</div>`;
+  out += `<div class="card"><div class="sec">Người chơi<span class="r">vai người sống được giữ kín</span></div>${playersGrid(S.phase === 'end', S.phase === 'lobby')}</div>`;
   out += `<div class="card"><div class="sec">👀 Khán đài (${specs.length} khán giả)</div>${specs.map(x => esc(x.name)).join(', ')}</div>`;
   return `<div class="cols"><div class="stack">${out}</div><div class="stack">${chatHTML()}<button class="ghost" data-act="leave">Rời phòng</button></div></div>`;
 }
@@ -817,7 +810,7 @@ function chatBox(ch) {
 }
 function chatSplit() {
   const p = S.players || {}, mine = (S.roles || {})[me.pid], alive = p[me.pid] && p[me.pid].alive;
-  const chs = me.spec ? ['day', 'wolf', 'dead'] : ['day'];   // khán giả thấy đủ 3 khung (chỉ đọc)
+  const chs = ['day'];   // khán giả chỉ đọc được chat làng
   if (!me.spec) { if (mine === 'wolf') chs.push('wolf'); if (!alive) chs.push('dead'); }
   if (S.phase === 'night' && chs.includes('wolf')) chs.unshift(chs.splice(chs.indexOf('wolf'), 1)[0]);   // đêm: khung Sói lên đầu
   return chs.map(chatBox).join('');
