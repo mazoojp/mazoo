@@ -141,7 +141,8 @@
   .tabs{display:flex;gap:6px;margin:8px 0;align-items:center;flex-wrap:wrap}
   .tabs button{min-height:30px;height:30px;padding:0 12px;border-radius:8px;font-size:13px;background:#f3f4f6;color:var(--mute)}
   .tabs button.sel{background:var(--pri-soft);color:var(--pri-text)} .tabs button.sel[data-ch=wolf]{background:#FDECEC;color:#DC2626} .tabs button.sel[data-ch=dead]{background:#EEF0F3;color:#6B7280}
-  .chatlist{flex:1;min-height:0;overflow-y:auto;background:#f9f9fb;border-radius:12px;padding:10px;margin-bottom:10px}
+  /* khung chat không cuộn: tin mới nằm dưới cùng, tin cũ vượt quá khung thì bị cắt bỏ, chỉ còn tin mới */
+  .chatlist,#gchatlist,#cchatlist{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;background:#f9f9fb;border-radius:12px;padding:10px;margin-bottom:10px} .chatlist>*,#gchatlist>*,#cchatlist>*{flex:none}
   .msg{margin:5px 0;overflow-wrap:anywhere}
   .msg .chn{font-weight:700;font-size:12px;padding:1px 7px;border-radius:999px;margin-right:2px} .chn.day{background:#E8F1FD;color:#1371E2} .chn.wolf{background:#FDECEC;color:#DC2626} .chn.dead{background:#EEF0F3;color:#6B7280} .msg b{color:var(--pri)} .msg.wolfmsg b{color:var(--red)} .msg.deadmsg b{color:var(--faint)}
   .chat.sm{height:min(340px,55vh);position:static;margin-bottom:12px} .chat.sm.day{height:min(640px,90vh)} .chat.day{border-top:4px solid var(--pri)} .chat.wolf{border-top:4px solid #DC2626;background:#fffafa} .chat.dead{border-top:4px solid #6B7280}
@@ -195,7 +196,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126ai';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126aj';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -969,7 +970,7 @@ function gcListHTML() {
 function gcCardHTML(embedded) {   // khung chat tổng: dùng ở tab Chat tổng và nhúng ở trang chủ (dưới bảng Phòng đang mở)
   const name = gcSaved();
   return `<div class="card chat" style="height:${embedded ? 'min(1000px,140vh)' : 'min(1000px,140vh)'};position:static"><div class="sec">💬 Chat tổng <span class="note" style="font-weight:400">· mọi người chơi đều thấy · tin giữ ${GC_KEEP_DAYS} ngày</span></div>
-    <div id="gchatlist" style="flex:1;min-height:0;overflow-y:auto;background:#f9f9fb;border-radius:12px;padding:10px;margin-bottom:10px">${gcListHTML()}</div>
+    <div id="gchatlist">${gcListHTML()}</div>
     ${name ? `<div class="note" style="margin-bottom:6px">Bạn là <b>${esc(name)}</b> · <a href="#" data-act="gchange" style="color:var(--pri)">đổi tên</a></div>
     <div class="chatrow"><input data-bind="gchat" maxlength="300" placeholder="Nhập tin nhắn…" value="${esc(gcDraft)}" autocomplete="off"><button class="primary" data-act="gsend">Gửi</button></div>`
     : `<div class="chatrow"><input data-bind="gname" maxlength="20" placeholder="Nhập tên của bạn để chat" value="${esc(gcName)}" autocomplete="off"><button class="primary" data-act="gname">Vào chat</button></div>`}
@@ -1441,7 +1442,7 @@ function caroChatHTML() {
   const msgs = Object.entries(C.chat || {}).sort(msgOrder).slice(-80);
   const why = '';   // cờ caro: khán giả cũng chat được
   return `<div class="card chat" style="height:360px;position:static"><div class="sec">💬 Chat</div>
-  <div id="cchatlist" style="flex:1;min-height:0;overflow-y:auto;background:#f9f9fb;border-radius:12px;padding:10px;margin-bottom:10px">${msgs.length ? msgs.map(([, m]) => `<div class="msg"><b ${m.pid === cme.pid ? 'style="color:var(--green)"' : ''}>${esc(m.name)}</b>${m.spec ? ' <span class="chip mute" style="height:18px;font-size:10px;padding:0 6px">khán giả</span>' : ''}: ${esc(m.text)}</div>`).join('') : '<div class="note">Chưa có tin nhắn.</div>'}</div>
+  <div id="cchatlist">${msgs.length ? msgs.map(([, m]) => `<div class="msg"><b ${m.pid === cme.pid ? 'style="color:var(--green)"' : ''}>${esc(m.name)}</b>${m.spec ? ' <span class="chip mute" style="height:18px;font-size:10px;padding:0 6px">khán giả</span>' : ''}: ${esc(m.text)}</div>`).join('') : '<div class="note">Chưa có tin nhắn.</div>'}</div>
   ${why ? `<div class="note" style="margin-bottom:8px">${why}</div>` : ''}
   <div class="chatrow"><input data-bind="cchat" maxlength="200" placeholder="${why ? 'Không thể gửi lúc này' : 'Nhập tin nhắn…'}" value="${esc(cDraft)}" ${why ? 'disabled' : ''} autocomplete="off">
   <button class="primary" data-act="csend" ${why ? 'disabled' : ''}>Gửi</button></div></div>`;
@@ -1677,7 +1678,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261126ai';
+const APP_V = '20261126aj';
 async function checkNewVersion() {
   try {
     const t = await (await fetch(location.pathname + '?_v=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/const APP_V = '([^']+)'/);
