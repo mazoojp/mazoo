@@ -198,7 +198,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126al';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126am';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -303,6 +303,7 @@ async function joinOrCreate() {   // phòng có sẵn thì vào, chưa có thì 
     await B.set('rooms/' + code, { host: pid, phase: 'lobby', round: 0, createdAt: tnow(), allowSpec: true, players: { [pid]: { name, alive: true, t: tnow() } }, seen: { [pid]: tnow() } });
     return enter({ pid, name, code });
   }
+  if (Object.values(room.kicked || {}).some(k => String(k.name).trim().toLowerCase() === name.toLowerCase() && tnow() - k.t < 600000)) return setErr('Bạn vừa bị chủ phòng mời ra khỏi phòng ' + code + '. Hãy thử lại sau ít phút hoặc chọn phòng khác.');
   const players = room.players || {};
   const same = Object.entries(players).find(([, p]) => !p.bot && p.name.trim().toLowerCase() === name.toLowerCase());   // người chơi (không tính người máy) trùng tên
   if (room.phase !== 'lobby') {   // ván đã bắt đầu
@@ -355,6 +356,7 @@ function enter(m) {
   unwatch = B.watch('rooms/' + me.code, v => {
     S = v;
     if (!S) { leaveLocal(); render(); return; }
+    if (me && S.kicked && S.kicked[me.pid] && !(S.players || {})[me.pid] && !me.spec) { leaveLocal(); homeErr = 'Bạn đã bị chủ phòng mời ra khỏi phòng.'; render(); return; }
     if (me && !me.spec && S.spectators && S.spectators[me.pid] && !(S.players || {})[me.pid]) { me = { pid: me.pid, name: me.name, code: me.code, spec: true, why: 'self' }; store().setItem('masoi_me', JSON.stringify(me)); }   // luật đã chuyển mình xuống khán đài
     else if (me && me.spec && (S.players || {})[me.pid]) { me = { pid: me.pid, name: me.name, code: me.code }; store().setItem('masoi_me', JSON.stringify(me)); beatSent = false; }   // lên chơi
     if (!beatSent) { beatSent = true; beat(); }
@@ -405,7 +407,7 @@ async function leave() {
 }
 
 /* ============ Lệnh gửi cho bot quản trò ============ */
-const sendCmd = type => B.set(base() + 'cmd', { type, by: me.pid, t: tnow() });
+const sendCmd = (type, extra) => B.set(base() + 'cmd', { type, by: me.pid, t: tnow(), ...(extra || {}) });
 const ready = () => B.set(base() + 'ready/' + me.pid, true);
 
 // Ai chạy luật? Có bot quản trò (masoi-bot) đang chạy thì bot lo. Không có bot (hoặc chế độ thử) thì máy của chủ phòng chạy luật.
@@ -630,7 +632,8 @@ function playersGrid(withRole, forLobby) {
     const tags = (id === S.host ? '<span class="chip" style="height:22px;font-size:11px">chủ phòng</span> ' : '') + (v.bot ? '<span class="chip mute" style="height:22px;font-size:11px">người máy</span>' : '');
     const meta = forLobby ? (v.ready ? '<span class="chip green" style="height:22px;font-size:11px">✅ sẵn sàng</span>' : '<span class="meta">⏳ chưa sẵn sàng</span>')
       : ((withRole || (!v.alive && !S.hideRoles) || iAmDead || (!forLobby && !me.spec && roles[me.pid] === 'wolf' && roles[id] === 'wolf')) && roles[id] ? `<span class="meta t-${roles[id]}">${ROLE_NAME[roles[id]]}${v.alive ? '' : ' · đã chết'}</span>` : v.alive ? '<span class="meta">còn sống</span>' : '<span class="meta">đã chết</span>');
-    const x = forLobby && v.bot && host ? `<button class="x ghost" data-act="rmBot" data-pid="${id}" style="min-height:28px;padding:2px 10px;font-size:12px">Xóa</button>` : '';
+    const x = forLobby && v.bot && host ? `<button class="x ghost" data-act="rmBot" data-pid="${id}" style="min-height:28px;padding:2px 10px;font-size:12px">Xóa</button>`
+      : forLobby && !v.bot && host && id !== me.pid && !v.ready ? `<button class="x ghost" data-act="kick" data-pid="${id}" title="Mời người chưa sẵn sàng ra khỏi phòng" style="min-height:28px;padding:2px 10px;font-size:12px">Mời ra</button>` : '';
     return `<div class="ptile ${v.alive ? '' : 'dead'}">${avatar(v.name)}<div style="min-width:0"><span class="nm">${esc(v.name)}${id === me.pid ? ' (bạn)' : ''}</span>${tags} ${meta}</div>${x}</div>`;
   }).join('')}</div>`;
 }
@@ -1594,6 +1597,7 @@ document.addEventListener('click', e => {
   else if (a === 'witchSave') B.set(base() + 'night/witch', { save: true, poison: null });
   else if (a === 'witchSkip') B.set(base() + 'night/witch', { save: false, poison: null });
   else if (a === 'witchPoisonOpen') { witchOpen = !witchOpen; render(); }
+  else if (a === 'kick') { if (S && S.host === me.pid && S.phase === 'lobby') sendCmd('kick', { target: el.dataset.pid }); }
   else if (a === 'toSpec') toSpectator();
   else if (a === 'toPlayer') toPlayer();
   else if (a === 'toggleHide') { if (S && S.host === me.pid && S.phase === 'lobby') B.set(base() + 'hideRoles', !S.hideRoles); }
@@ -1682,7 +1686,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261126al';
+const APP_V = '20261126am';
 async function checkNewVersion() {
   try {
     const t = await (await fetch(location.pathname + '?_v=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/const APP_V = '([^']+)'/);

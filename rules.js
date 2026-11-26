@@ -97,6 +97,13 @@ export function planStep(room, now) {
     const c = room.cmd, ids = Object.keys(room.players);
     if (c.type === 'start' && room.phase === 'lobby' && ids.length >= MIN && ids.length <= MAX && (c.by === room.host || !room.players[room.host])) return startPlan(room, ids, now);
     if (c.type === 'again' && room.phase === 'end') return room.endedAt && now - room.endedAt < AGAIN_LOCK * 1000 ? { u: { cmd: null } } : againPlan(room);
+    if (c.type === 'kick') {   // chủ phòng mời người chơi chưa sẵn sàng ra khỏi phòng chờ
+      const t = room.players[c.target], u = { cmd: null };
+      if (room.phase === 'lobby' && c.by === room.host && c.target !== room.host && t && !t.bot && !t.ready) {
+        u['players/' + c.target] = null; u['seen/' + c.target] = null; u['ready/' + c.target] = null; u['kicked/' + c.target] = { name: t.name, t: now };
+      }
+      return { u };
+    }
     if ((c.type === 'spec' || c.type === 'play') && (room.phase === 'lobby' || room.phase === 'end')) return { u: switchPlan(room, c, now) };   // xuống khán đài / lên chơi: xử lý tại đây để không bị đua với lúc bắt đầu ván
     return { u: { cmd: null } };   // lệnh không hợp lệ: bỏ
   }
