@@ -208,9 +208,13 @@ function nightPlan(room, now) {
   if (poisonT) u['witchUsed/poison'] = true;
   const by = guardSave && healOk ? 'Bảo vệ và Phù thủy' : healOk ? 'Phù thủy' : 'Bảo vệ';
   const wolfTxt = !target ? 'Sói không cắn ai' : saved ? `Có người bị Sói cắn nhưng được ${by} cứu` : `${nm(target)} bị Sói cắn chết`;
-  const note = poisonT ? (target && !saved ? `${wolfTxt} và ${nm(poisonT)} bị đầu độc chết.` : `${wolfTxt}, còn ${nm(poisonT)} bị đầu độc chết.`) : (target && !saved ? `${wolfTxt}.` : `${wolfTxt} nên không ai chết.`);
-  const announce = 'Đêm qua ' + note.replace(/^Có/, 'có');
   const deaths = []; if (target && !saved) deaths.push(target); if (poisonT && !deaths.includes(poisonT)) deaths.push(poisonT);
+  let note = poisonT ? (target && !saved ? `${wolfTxt} và ${nm(poisonT)} bị đầu độc chết.` : `${wolfTxt}, còn ${nm(poisonT)} bị đầu độc chết.`) : (target && !saved ? `${wolfTxt}.` : `${wolfTxt} nên không ai chết.`);
+  let announce = 'Đêm qua ' + note.replace(/^Có/, 'có');
+  if (room.hideRoles) {   // chế độ căng: không lộ lý do (Sói không cắn / Bảo vệ cứu / Phù thủy cứu / đầu độc), chỉ báo ai chết hoặc đêm an toàn
+    note = deaths.length ? `${deaths.map(nm).join(' và ')} đã chết.` : 'An toàn, không ai chết.';
+    announce = deaths.length ? `Đêm qua ${note}` : 'Đêm qua an toàn, không ai chết.';
+  }
   deaths.forEach(d => { u['players/' + d + '/alive'] = false; u['dead/' + d] = true; });
   u['log/' + lk(r, 1)] = note; u.announce = announce;
   const hunterId = deaths.find(id => roles[id] === 'hunter' && id !== poisonT);   // Thợ săn bị đầu độc thì không bắn được
