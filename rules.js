@@ -34,6 +34,28 @@ export function tally(votes) {
   const max = Math.max(0, ...Object.values(c));
   return { top: Object.keys(c).filter(k => c[k] === max), max };
 }
+/* ---------- Thành tích: mỗi ván kết thúc ghi một bản ghi meta/wg/<mã phòng>_<giờ> (ghi lặp lại vẫn cùng nội dung), bảng xếp hạng cộng dồn từ các bản ghi ---------- */
+export const scoreKey = n => String(n || '').normalize('NFC').toLowerCase().trim().replace(/\s+/g, '_').replace(/[.$#\[\]\/]/g, '_').slice(0, 40);
+export function gameRecord(room, win, now) {   // chỉ tính người thật, và ván phải có từ 2 người thật trở lên (chơi với người máy một mình không tính)
+  const p = {}; let humans = 0;
+  for (const [id, pl] of Object.entries(room.players || {})) {
+    const r = (room.roles || {})[id]; if (pl.bot || !r) continue;
+    humans++; p[scoreKey(pl.name) || id] = { n: pl.name, r };
+  }
+  return humans >= 2 ? { t: now, w: String(win).startsWith('Dân') ? 'vill' : 'wolf', p } : null;
+}
+export function tallyScores(wg) {   // -> mảng xếp hạng: nhiều ván thắng nhất đứng đầu, bằng nhau thì ai chơi nhiều hơn xếp trên
+  const T = {};
+  for (const rec of Object.values(wg || {})) {
+    if (!rec || !rec.p) continue;
+    for (const [k, x] of Object.entries(rec.p)) {
+      const a = T[k] || (T[k] = { key: k, name: x.n, games: 0, wolf: 0, vill: 0, seer: 0, guard: 0, win: 0, loss: 0 });
+      a.name = x.n; a.games++; if (a[x.r] != null) a[x.r]++;
+      if ((x.r === 'wolf') === (rec.w === 'wolf')) a.win++; else a.loss++;
+    }
+  }
+  return Object.values(T).sort((a, b) => b.win - a.win || b.games - a.games || String(a.name).localeCompare(String(b.name)));
+}
 export function winnerOf(players, roles, deadId) {
   const alive = Object.keys(players).filter(id => players[id].alive && id !== deadId);
   const wolves = alive.filter(id => roles[id] === 'wolf').length, others = alive.length - wolves;
@@ -137,7 +159,7 @@ function nightPlan(room, now) {
   if (win) { u.phase = 'end'; u.winner = win; u.deadline = null; } else { u.phase = 'day'; u.deadline = now + durOf(room, 'day') * 1000; }
   u.announce = announce; u['log/' + logKey(2 * r - 1)] = note;
   if (win) { u.endedAt = now; u['log/999'] = '🏁 ' + win; }
-  return { u };
+  return { u, g: win ? gameRecord(room, win, now) : null };
 }
 function votePlan(room, now) {
   const players = room.players, roles = room.roles || {}, r = room.round, al = aliveIds(room);
@@ -151,7 +173,7 @@ function votePlan(room, now) {
   u['log/' + logKey(2 * r)] = note;
   if (win) { u.phase = 'end'; u.winner = win; u.announce = announce; u.deadline = null; u.endedAt = now; u['log/999'] = '🏁 ' + win; }
   else { u.phase = 'night'; u.round = r + 1; u.announce = announce + `\nĐêm ${r + 1} bắt đầu…`; u.deadline = now + DUR.night * 1000; }
-  return { u };
+  return { u, g: win ? gameRecord(room, win, now) : null };
 }
 
 /* ---------- Bot người chơi (người máy) ----------
@@ -204,6 +226,7 @@ export const planAll = (room, now) => planStep(room, now) || planBots(room, now)
 export async function stepRoom(B, code, room, now) {
   const plan = planAll(room, now); if (!plan) return false;
   const u = {}; for (const [k, v] of Object.entries(plan.u)) u['rooms/' + code + '/' + k] = v;
+  if (plan.g) u['meta/wg/' + code + '_' + plan.g.t] = plan.g;   // ván kết thúc: ghi thành tích
   await B.update(u); return true;
 }
 

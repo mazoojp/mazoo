@@ -190,7 +190,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126r';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126s';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -412,7 +412,7 @@ function updateClock() {
 const nguOn = () => window.SHOW_NGU !== false;   // config.js: SHOW_NGU = false thì ẩn tab Ngủ đêm
 const donateOn = () => window.SHOW_DONATE !== false;   // config.js: SHOW_DONATE = false thì ẩn tab Ủng hộ 1 bát ramen
 function render() {
-  syncGc();
+  syncGc(); syncWg();
   if (game === 'donate' && !donateOn()) game = 'masoi';
   if (game === 'ngu' && !nguOn()) game = 'masoi';
   if (game === 'menu') return $app.innerHTML = shell('<iframe src="latable.html?v=20261124b" title="LA TABLE" style="width:100%;height:calc(100vh - 24px);min-height:640px;border:0;border-radius:12px;background:#f6f2ea"></iframe>');
@@ -573,6 +573,7 @@ function homeHTML() {
       ${homeErr ? `<div class="err">${esc(homeErr)}</div>` : '<div class="note" style="margin-top:6px">Phòng đã có thì bạn vào chơi cùng. Chưa có thì phòng mới được tạo với số này.</div>'}
     </div>
     ${roomsCardHTML()}
+    ${wgCardHTML()}
     ${gcCardHTML(true)}
   </div>`;
 }
@@ -1540,6 +1541,21 @@ document.addEventListener('click', e => {
   else if (a === 'send') sendChat(el.dataset.ch);
   else if (a === 'chatTab') { chatTab = el.dataset.ch; render(); }
 });
+
+/* ============ Bảng thành tích Ma sói (cộng dồn từ meta/wg, mỗi ván kết thúc có 1 bản ghi) ============ */
+let wgRaw = null, wgUnwatch = null;
+function wgCardHTML() {
+  const t = tallyScores(wgRaw), top = t.slice(0, 20), medal = i => ['🥇', '🥈', '🥉'][i] || i + 1;
+  return `<div class="card" id="wgcard"><div class="sec">🏆 Bảng thành tích Ma sói</div>${top.length ? `<div style="overflow-x:auto"><table class="rank"><thead><tr><th>#</th><th>Tên</th><th>Ván</th><th>🐺 Sói</th><th>🧑‍🌾 Dân</th><th>🔮 Tiên tri</th><th>🛡️ Bảo vệ</th><th>Thắng</th><th>Thua</th><th>Tỉ lệ</th></tr></thead><tbody>${top.map((x, i) => `<tr class="${homeName && x.key === scoreKeyOf(homeName) ? 'me' : ''}"><td>${medal(i)}</td><td><b>${esc(x.name)}</b></td><td>${x.games}</td><td>${x.wolf}</td><td>${x.vill}</td><td>${x.seer}</td><td>${x.guard}</td><td><b>${x.win}</b></td><td>${x.loss}</td><td>${Math.round(100 * x.win / x.games)}%</td></tr>`).join('')}</tbody></table></div>`
+    : '<div class="note">Chưa có ván nào được ghi. Chơi xong một ván (có từ 2 người thật trở lên) là có tên ở đây.</div>'}
+    <div class="note" style="margin-top:8px">Xếp theo số ván thắng; bằng nhau thì ai chơi nhiều ván hơn xếp trên. Người máy và ván chỉ có 1 người thật không tính. Tên được nhận bằng tên bạn nhập khi vào phòng.</div></div>`;
+}
+const scoreKeyOf = n => String(n || '').normalize('NFC').toLowerCase().trim().replace(/\s+/g, '_').replace(/[.$#\[\]\/]/g, '_').slice(0, 40);
+function syncWg() {   // chỉ theo dõi khi đang ở trang chủ Ma sói
+  const want = game === 'masoi' && !me;
+  if (want && !wgUnwatch) wgUnwatch = B.watch('meta/wg', v => { wgRaw = v; const el = document.getElementById('wgcard'); if (el) el.outerHTML = wgCardHTML(); });
+  else if (!want && wgUnwatch) { wgUnwatch(); wgUnwatch = null; }
+}
 
 /* ============ Số người online + danh sách phòng đang mở ============ */
 // Online: mỗi trang đang mở ghi meta/online/<mã> (giờ máy chủ) mỗi 25 giây và tự bị xoá khi ngắt kết nối; đếm các nút còn mới (< 80 giây).
