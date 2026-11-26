@@ -152,6 +152,9 @@
   .rrow{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid #eceef2;border-radius:12px;margin-top:8px;flex-wrap:wrap} .rrow .rc{font-weight:800;font-size:18px;min-width:56px;color:var(--pri-text)} .rrow .ri{flex:1;min-width:160px;font-size:14px} .rrow .ri .note{font-size:12px}
   /* đồng hồ đếm ngược: giữ chỗ cố định và số cùng bề rộng để các dòng bên dưới không trồi lên thụt xuống mỗi giây */
   #fillhint{min-height:2.8em;font-variant-numeric:tabular-nums} #cd{min-width:78px;justify-content:center;font-variant-numeric:tabular-nums}
+  .cols.chat2{grid-template-columns:minmax(0,5fr) minmax(0,7fr)} .cols.chat2>.stack:last-child{align-self:stretch}
+  .chatpair{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:start;position:sticky;top:68px}
+  .chatpair .chat.sm,.chatpair .chat.sm.day,.chatpair .chat.sm.dead,.chatpair .chat.sm.wolf{height:min(640px,calc(100vh - 150px));margin-bottom:0}
   .chatrow{display:flex;gap:8px} .chatrow input{height:42px}
   .chatrow button{min-width:64px}
 
@@ -190,7 +193,7 @@
   .pl2.turn{border-color:var(--pri);background:var(--pri-soft)}
   .mk{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-weight:800;color:#fff;flex:0 0 30px}
   .mk.x{background:#1371E2} .mk.o{background:#EC4920}
-  @media(max-width:991px){.row2{grid-template-columns:1fr}.cols{grid-template-columns:1fr}.chat{position:static;height:380px}}
+  @media(max-width:991px){.row2{grid-template-columns:1fr}.cols,.cols.chat2{grid-template-columns:1fr}.chatpair{position:static}.chatpair .chat.sm,.chatpair .chat.sm.day,.chatpair .chat.sm.dead,.chatpair .chat.sm.wolf{height:380px}.chat{position:static;height:380px}}
   @media(max-width:767px){.logo{font-size:20px;gap:4px}.logo .o{width:22px;height:22px;font-size:12px}.topbar .chip{padding:0 8px}.tb{padding:8px 10px}.user{flex:0 0 36px;width:36px;height:36px}.topbar{gap:6px}.sidebar{display:none}.topbar{padding:0 10px}.page{padding:12px 12px 32px}.sbar{flex-direction:column;align-items:stretch}.sel{flex:1 1 auto}.sbar>button.primary{width:100%}.greet{display:none}.tb.hide{display:none}.banner2 .big{font-size:96px;right:12px}.banner2 .bigimg{height:150px;right:8px}.banner2 h2{font-size:24px}.vocab{grid-template-columns:1fr}.code{font-size:36px;letter-spacing:6px}.hero h1{font-size:24px}}
 </style>
 </head>
@@ -198,7 +201,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126aq';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126ar';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -735,7 +738,8 @@ function specHTML() {
   out += `<div class="card"><div class="sec">Người chơi<span class="r">vai người sống được giữ kín</span></div>${playersGrid(S.phase === 'end', S.phase === 'lobby')}</div>`;
   if (S.phase === 'lobby') out += lastGameHTML();
   out += `<div class="card"><div class="sec">👀 Khán đài (${specs.length} khán giả)</div>${specs.map(x => esc(x.name)).join(', ')}</div>`;
-  return `<div class="cols"><div class="stack">${out}</div><div class="stack">${chatHTML()}<button class="ghost" data-act="leave">Rời phòng</button></div></div>`;
+  const chatH = chatHTML();
+  return `<div class="cols ${chatH.includes('chatpair') ? 'chat2' : ''}"><div class="stack">${out}</div><div class="stack">${chatH}<button class="ghost" data-act="leave">Rời phòng</button></div></div>`;
 }
 
 /* ---------- Màn hình ván chơi ---------- */
@@ -750,6 +754,11 @@ function wolfMatesHTML() {
   const mates = Object.keys(roles).filter(id => roles[id] === 'wolf' && id !== me.pid && p[id]);
   return `<div class="card" style="border-left:4px solid #DC2626;padding:10px 16px">🐺 <b>Đồng bọn Sói của bạn:</b> ${mates.length ? mates.map(id => esc(p[id].name) + (p[id].alive ? '' : ' (đã chết)')).join(', ') : 'không có (bạn là Sói duy nhất)'}</div>`;
 }
+const ROLE_ORDER = ['wolf', 'seer', 'guard', 'chief', 'witch', 'hunter', 'vill'], ROLE_ICON = { wolf: '🐺', seer: '🔮', guard: '🛡️', chief: '👑', witch: '🧙', hunter: '🏹', vill: '🧑‍🌾' };
+function revealHTML(list) {   // "ai là ai": gom theo vai, Sói đứng đầu; list = [{n, r, a}]
+  const rows = ROLE_ORDER.map(r => ({ r, xs: list.filter(x => x.r === r) })).filter(g => g.xs.length);
+  return rows.map(g => `<div style="margin:5px 0">${ROLE_ICON[g.r]} <b class="t-${g.r}">${ROLE_NAME[g.r]}</b>: ${g.xs.map(x => `<b>${esc(x.n)}</b>${x.a ? '' : ' 💀'}`).join(', ')}</div>`).join('');
+}
 function recapLines(L) {
   return Object.keys(L || {}).sort().map(k => `<div class="note" style="margin:4px 0">${k === '999' ? '' : `<b>${k.startsWith('00') ? (k % 2 ? '🌙 Đêm ' + (Math.floor(k / 2) + 1) : '☀️ Ngày ' + (k / 2)) : { 1: '🌙 Đêm ' + +k.slice(0, 2), 2: '🏹 Thợ săn', 3: '☀️ Ngày ' + +k.slice(0, 2), 4: '🏹 Thợ săn' }[k[2]]}:</b> `}${k === '999' ? `<b>${esc(L[k])}</b>` : esc(L[k]).replace(/\n/g, ' ')}</div>`).join('');
 }
@@ -761,7 +770,7 @@ function lastGameInline() {   // kết quả ván vừa rồi, gọn, nằm ngay
   const g = S.last; if (!g) return '';
   return `<div style="margin-top:14px;padding-top:12px;border-top:1px solid #e5e7eb;text-align:left">
     <div class="sec" style="margin-bottom:6px">🏁 Kết quả ván vừa rồi</div><p style="font-weight:700;margin:0 0 8px">${esc(g.winner)}</p>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">${(g.p || []).map(x => `<span class="chip ${x.a ? '' : 'mute'}" style="height:auto;min-height:26px;padding:3px 10px">${esc(x.n)}${x.r ? ` · <b class="t-${x.r}">${ROLE_NAME[x.r] || ''}</b>` : ''}${x.a ? '' : ' 💀'}</span>`).join('')}</div>
+    <div style="margin-bottom:8px">${revealHTML(g.p || [])}</div>
     <div style="max-height:170px;overflow-y:auto">${recapLines(g.log)}</div></div>`;
 }
 function lastGameHTML() {   // phòng chờ vẫn hiện kết quả ván vừa rồi cho tới khi ván mới bắt đầu
@@ -822,12 +831,14 @@ function gameHTML() {
     else out += v[me.pid] ? `<div class="card">Bạn đã bỏ phiếu cho <b>${esc(p[v[me.pid]].name)}</b>.</div>` : picker(alive.filter(id => id !== me.pid), 'vote', myRole === 'chief' ? '👑 Bỏ phiếu treo cổ (lá phiếu của Trưởng làng tính là 2)' : 'Bỏ phiếu treo cổ');
     out += `<p class="note" style="text-align:center">Đã bỏ phiếu: ${cnt}/${alive.length}</p>`;
   } else if (S.phase === 'end') {
+    out += `<div class="card"><div class="sec">🎭 Ai là ai trong ván này</div>${revealHTML(Object.entries(p).sort((a, b) => (a[1].t || 0) - (b[1].t || 0)).map(([id, v]) => ({ n: v.name, r: roles[id], a: v.alive })))}</div>`;
     out += `<div class="card ann"><b>${esc(S.winner || '')}</b><div class="row" style="justify-content:center;margin-top:12px"><button class="primary" id="againbtn" data-act="again" style="min-width:180px">Chơi ván mới</button><button data-act="toSpec">👀 Xuống khán đài</button><button class="ghost" data-act="leave">Thoát khỏi phòng</button></div></div>`;
   }
   if (['night', 'vote', 'hunter'].includes(S.phase)) { const blk = out.slice(actMark); out = out.slice(0, actMark).replace('\u0001ACT\u0001', blk); } else out = out.replace('\u0001ACT\u0001', '');   // phần chọn hành động nằm trên cùng
   out += `<div class="card"><div class="sec">Người chơi</div>${playersGrid(S.phase === 'end', false)}</div>`;
   if (S.log) out += roleCard;
-  return `<div class="cols"><div class="stack">${out}</div><div class="stack">${chatHTML()}${S.host === me.pid ? specBtn() : ''}${S.phase === 'end' ? '' : '<button class="ghost" data-act="leave">Thoát khỏi phòng</button>'}</div></div>`;
+  const chatH = chatHTML();
+  return `<div class="cols ${chatH.includes('chatpair') ? 'chat2' : ''}"><div class="stack">${out}</div><div class="stack">${chatH}${S.host === me.pid ? specBtn() : ''}${S.phase === 'end' ? '' : '<button class="ghost" data-act="leave">Thoát khỏi phòng</button>'}</div></div>`;
 }
 
 /* ============ Chat ============ */
@@ -889,7 +900,8 @@ function chatSplit() {
   const chs = me.spec ? ['day', 'wolf', 'dead'] : ['day'];   // khán giả đọc được cả ba khung (chỉ đọc); ở khung Sói tên được thay bằng Sói 1, Sói 2…
   if (!me.spec) { if (mine === 'wolf') chs.push('wolf'); if (!alive) chs.push('dead'); }
   if (S.phase === 'night' && chs.includes('wolf')) chs.unshift(chs.splice(chs.indexOf('wolf'), 1)[0]);   // đêm: khung Sói lên đầu
-  return chs.map(chatBox).join('');
+  const boxes = chs.map(chatBox).join('');
+  return chs.length > 1 ? `<div class="chatpair">${boxes}</div>` : boxes;   // từ 2 khung trở lên: xếp ngang nhau, đứng yên khi cuộn trang
 }
 function chatHTML() {   // phòng chờ và khán đài (đang chơi): một khung gộp; đang chơi: các khung tách riêng; hết ván: chỉ còn một khung chat chung
   if (S.phase === 'end') return chatBox('day');
@@ -1706,7 +1718,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261126aq';
+const APP_V = '20261126ar';
 async function checkNewVersion() {
   try {
     const t = await (await fetch(location.pathname + '?_v=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/const APP_V = '([^']+)'/);
