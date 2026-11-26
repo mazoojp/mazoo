@@ -19,6 +19,10 @@
   button.amber{background:var(--amber);color:#3d2a00} button.amber:hover{background:#f0a000}
   button.ghost{background:#E5E7EB;color:#374151} button.ghost:hover{background:#D1D5DB}
   button:disabled{opacity:.45;cursor:default;transform:none}
+  /* các nút thường: nền trắng, viền mảnh, chữ đậm (nút dạng tab/thẻ/ô cờ giữ kiểu riêng) */
+  button:not([class]),button.primary,button.amber,button.ghost,button.tb{background:#fff;color:var(--text);border:1px solid #d5d9e0}
+  button:not([class]):hover:not(:disabled),button.primary:hover:not(:disabled),button.amber:hover:not(:disabled),button.ghost:hover:not(:disabled),button.tb:hover:not(:disabled){background:#f3f4f6}
+  button.primary{font-weight:700}
   input{font:inherit;color:var(--text);width:100%;height:48px;padding:0 14px;border:1px solid var(--line);border-radius:12px;background:#fff;outline:none}
   input:focus{border-color:var(--pri);box-shadow:0 0 0 3px #1371e222}
   input:disabled{background:#f6f7f9}
@@ -190,7 +194,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126v';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126w';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -520,7 +524,7 @@ function shell(inner) {
         ${B.mode === 'firebase' ? `<span class="chip green" title="Số người đang mở trang web">🟢 <span class="onlinecnt">${onlineN}</span> online</span>` : ''}
         ${inRoom ? `<span class="chip">Phòng ${esc(cx.code)}</span>` : ''}
         ${inRoom ? '<button class="primary tb hide" data-act="invite">Mời bạn bè</button>' : ''}
-        <button class="tb" data-act="help" style="background:var(--pri-soft);color:var(--pri)">Cách chơi</button>
+        <button class="tb" data-act="help">Cách chơi</button>
         ${cx ? `<span class="user">${avatar(cx.name, '', game === 'caro' ? cx.pid : '')}</span>` : ''}
       </header>
       <main class="page">${notices}${inner}</main>
