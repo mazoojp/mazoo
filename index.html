@@ -198,7 +198,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126am';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126an';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -476,13 +476,15 @@ function render() {
     const mine = (S.roles || {})[me.pid], alive = S.players && S.players[me.pid] && S.players[me.pid].alive;
     chatTab = S.phase === 'night' && mine === 'wolf' && alive ? 'wolf' : (alive === false && S.phase !== 'end' ? 'dead' : 'day');
   }
+  const sy = window.scrollY, sx = window.scrollX;   // vẽ lại cả trang mỗi khi có thay đổi: giữ nguyên vị trí người đang cuộn đọc (không bị kéo về ô nhập)
   $app.innerHTML = shell(me.spec ? specHTML() : S.phase === 'lobby' ? lobbyHTML() : gameHTML());
+  window.scrollTo(sx, sy);
   const rc = document.getElementById('recap'); if (rc) rc.scrollTop = rc.scrollHeight;   // diễn biến ván: luôn cuộn tới dòng mới nhất
   document.querySelectorAll('.chatlist').forEach(l => { const o = scr[l.id]; l.scrollTop = !o || o.stick ? l.scrollHeight : o.top; });
   if (hadFocus) focusChat(caret, focusCh);
   updateClock();
 }
-function focusChat(pos, ch) { const i = document.querySelector('[data-bind=chat]' + (ch ? `[data-ch="${ch}"]` : '')); if (!i) return; i.focus(); try { i.setSelectionRange(pos, pos); } catch (e) {} }
+function focusChat(pos, ch) { const i = document.querySelector('[data-bind=chat]' + (ch ? `[data-ch="${ch}"]` : '')); if (!i) return; i.focus({ preventScroll: true }); try { i.setSelectionRange(pos, pos); } catch (e) {} }
 
 /* ---------- Khung chung: thanh bên + đầu trang ---------- */
 const AV_COLORS = ['#1371E2', '#009765', '#E59700', '#EC4920', '#5817CF', '#0A8FB5', '#C2185B', '#6B7A8F'];
@@ -1004,7 +1006,7 @@ function gchatRender() {
   const ol = document.getElementById('gchatlist'), stick = !ol || ol.scrollTop + ol.clientHeight >= ol.scrollHeight - 8, top = ol ? ol.scrollTop : 0;
   $app.innerHTML = shell(gcHTML());
   const nl = document.getElementById('gchatlist'); if (nl) nl.scrollTop = stick ? nl.scrollHeight : top;
-  if (bind) { const i = document.querySelector('[data-bind=' + bind + ']'); if (i && !i.disabled) { i.focus(); try { i.setSelectionRange(caret, caret); } catch (e) {} } }
+  if (bind) { const i = document.querySelector('[data-bind=' + bind + ']'); if (i && !i.disabled) { i.focus({ preventScroll: true }); try { i.setSelectionRange(caret, caret); } catch (e) {} } }
 }
 
 /* ============ Ngủ đêm: nằm ngủ kiếm tiền, xây súng, nâng cửa chống quái (chơi một mình, lưu trên máy) ============ */
@@ -1246,7 +1248,7 @@ function ncRender() {
     <div class="card"><div class="sec">👥 Đồng đội</div><div id="ncteam" class="stack" style="gap:8px"></div><p class="note" style="margin-top:8px">Súng của mọi người cùng bắn một con quái, phòng càng đông quái càng khoẻ (+50% máu mỗi người thêm). Cửa vỡ thì cả phòng lùi 2 đêm. Chủ phòng thoát thì người online sớm nhất chạy tiếp. Mỗi 5 đêm có BOSS.</p></div>
     <div class="card"><div class="sec">💬 Chat phòng <span class="note" style="font-weight:400">· chỉ người trong phòng này thấy</span></div><div id="ncchat" style="height:170px;overflow-y:auto;background:#f9f9fb;border-radius:12px;padding:10px;margin-bottom:8px"></div><div class="chatrow"><input data-bind="ncchat" maxlength="200" placeholder="Nhắn cho cả phòng…" value="${esc(ncDraft)}" autocomplete="off"><button class="primary" data-act="ncsend">Gửi</button></div></div></div>${NG_CSS}`);
   ncPaint();
-  if (hadChat) { const i = document.querySelector('[data-bind=ncchat]'); if (i) i.focus(); }
+  if (hadChat) { const i = document.querySelector('[data-bind=ncchat]'); if (i) i.focus({ preventScroll: true }); }
 }
 function ncPaint() {
   const $ = id => document.getElementById(id); if (!NCR || !ncSt || !$('nscene')) return;
@@ -1441,10 +1443,10 @@ function caroRender() {
   $app.innerHTML = shell(!cme ? caroHomeHTML() : !C ? '<div class="card">Đang vào phòng…</div>' : caroRoomHTML());
   if (!cme) gcStick();
   const nl = document.getElementById('cchatlist'); if (nl) nl.scrollTop = stick ? nl.scrollHeight : top;
-  if (bind) { const i = document.querySelector('[data-bind=' + bind + ']'); if (i && !i.disabled) { i.focus(); try { i.setSelectionRange(caret, caret); } catch (e) {} } }
+  if (bind) { const i = document.querySelector('[data-bind=' + bind + ']'); if (i && !i.disabled) { i.focus({ preventScroll: true }); try { i.setSelectionRange(caret, caret); } catch (e) {} } }
   if (rankData === null && !rankLoading) loadRank();
 }
-function caroFocusChat(pos) { const i = document.querySelector('[data-bind=cchat]'); if (!i) return; i.focus(); try { i.setSelectionRange(pos, pos); } catch (e) {} }
+function caroFocusChat(pos) { const i = document.querySelector('[data-bind=cchat]'); if (!i) return; i.focus({ preventScroll: true }); try { i.setSelectionRange(pos, pos); } catch (e) {} }
 function caroChatHTML() {
   const msgs = Object.entries(C.chat || {}).sort(msgOrder).slice(-80);
   const why = '';   // cờ caro: khán giả cũng chat được
@@ -1686,7 +1688,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261126am';
+const APP_V = '20261126an';
 async function checkNewVersion() {
   try {
     const t = await (await fetch(location.pathname + '?_v=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/const APP_V = '([^']+)'/);
