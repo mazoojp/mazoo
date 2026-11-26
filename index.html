@@ -203,7 +203,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126ay';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126az';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -589,7 +589,7 @@ function helpHTML() {
   <ol>
     <li>Vào phòng, nhập tên, bấm <b>Sẵn sàng</b>. Mọi người sẵn sàng thì ván tự bắt đầu. Thiếu người mà chờ ${LOBBY_WAIT} giây không ai vào thì tự thêm người máy.</li>
     <li>Chạm vào thẻ 🎴 để xem vai (đừng cho ai thấy).</li>
-    <li>🌙 <b>Ban đêm (${DUR.night} giây)</b>: Sói, Tiên tri, Bảo vệ, Phù thủy chọn mục tiêu. Dân làng chờ trời sáng.</li>
+    <li>🌙 <b>Ban đêm (mặc định ${DUR.night} giây, chủ phòng chỉnh được 20–90 giây)</b>: Sói, Tiên tri, Bảo vệ, Phù thủy chọn mục tiêu. Dân làng chờ trời sáng.</li>
     <li>🌅 <b>Mở đầu ván</b>: ván bắt đầu bằng một buổi sáng để mọi người làm quen và trò chuyện (chưa ai chết, chưa bỏ phiếu), hết giờ hoặc mọi người sẵn sàng thì trời tối, Đêm 1 bắt đầu.</li>
     <li>☀️ <b>Ban ngày (mặc định ${DUR.day} giây, chủ phòng chỉnh được 1–10 phút)</b>: biết ai chết, thảo luận trong chat để tìm Sói. Muốn sang bước tiếp thì bấm <b>Sẵn sàng bỏ phiếu</b>.</li>
     <li>🗳️ <b>Bỏ phiếu (${DUR.vote} giây)</b>: mỗi người chọn một người để treo cổ. Người nhiều phiếu nhất chết và lộ vai (trừ khi chủ phòng tắt “Lộ vai khi chết” ở phòng chờ). Hòa phiếu thì không ai chết.</li>
@@ -649,6 +649,7 @@ function playersGrid(withRole, forLobby) {
 const specOn = () => !S || S.allowSpec !== false;
 const fmtSec = n => n % 60 ? n + ' giây' : n / 60 + ' phút';
 const dayBtn = () => `<button data-act="cycleDay" title="Bấm để đổi thời gian thảo luận ban ngày (chỉ chủ phòng, ở phòng chờ)">☀️ Thảo luận: ${fmtSec(durOf(S, 'day'))}</button>`;
+const nightBtn = () => `<button data-act="cycleNight" title="Bấm để đổi thời gian ban đêm cho Sói và các vai (chỉ chủ phòng, ở phòng chờ)">🌙 Đêm: ${fmtSec(durOf(S, 'night'))}</button>`;
 const hideBtn = () => `<button data-act="toggleHide" title="Luật gốc: người chết lộ vai. Tắt đi thì vai người chết được giữ kín đến hết ván (căng hơn)">🎭 Lộ vai khi chết: ${S && S.hideRoles ? 'Tắt' : 'Bật'}</button>`;
 const specBtn = () => `<button data-act="toggleSpec" title="Cho phép người vào sau (phòng đầy hoặc đang chơi) ngồi xem">👀 Khán đài: ${specOn() ? 'Bật' : 'Tắt'}</button>`;
 function lobbyHTML() {
@@ -665,14 +666,14 @@ function lobbyHTML() {
       </div>
       <p class="note" style="text-align:center;margin-top:10px">${hint}</p>
       <p class="note" id="fillhint" style="text-align:center"></p>
-      <p class="note" style="text-align:center">☀️ Thảo luận ban ngày: <b>${fmtSec(durOf(S, 'day'))}</b> · 🎭 Khi chết: ${S.hideRoles ? 'KHÔNG lộ vai (chế độ căng)' : 'lộ vai (luật gốc)'}</p>
+      <p class="note" style="text-align:center">☀️ Thảo luận ban ngày: <b>${fmtSec(durOf(S, 'day'))}</b> · 🌙 Đêm: <b>${fmtSec(durOf(S, 'night'))}</b> · 🎭 Khi chết: ${S.hideRoles ? 'KHÔNG lộ vai (chế độ căng)' : 'lộ vai (luật gốc)'}</p>
       ${lastGameInline()}
     </div>
     <div class="card"><div class="sec">Người chơi (${n}/${MAX})<span class="r">${rdy} đã sẵn sàng</span></div>${playersGrid(false, true)}
       <div class="row" style="margin-top:12px">
         ${host && n < MAX ? '<button data-act="addBot">🤖 Thêm người máy</button>' : ''}
         <button data-act="toSpec" title="Xuống khán đài để xem, nhường chỗ cho người khác">👀 Xuống khán đài</button>
-        ${host ? specBtn() + hideBtn() + dayBtn() : ''}
+        ${host ? specBtn() + hideBtn() + dayBtn() + nightBtn() : ''}
         ${host && can && rdy < n ? '<button class="primary" data-act="start">Bắt đầu ngay (chủ phòng)</button>' : ''}
       </div>
     </div>
@@ -1627,6 +1628,7 @@ document.addEventListener('click', e => {
   }
   if (a === 'join') { game === 'caro' ? caroJoin() : joinOrCreate(); } else if (a === 'leave') { game === 'caro' ? caroLeave() : leave(); }
   else if (a === 'home') { if (game === 'ngu') { nguSave(); (async () => { if (NCm) await ncLeave(); game = 'masoi'; render(); })(); } else if (game === 'gchat') { gcStop(); game = 'masoi'; render(); } else if (game === 'donate' || game === 'menu') { game = 'masoi'; render(); } else if (game === 'caro') { if (cme) caroLeave(); } else if (me) leave(); }
+  else if (a === 'cycleNight') { if (S && S.host === me.pid && S.phase === 'lobby') B.set(base() + 'nightTime', NIGHT_OPTIONS[(NIGHT_OPTIONS.indexOf(durOf(S, 'night')) + 1) % NIGHT_OPTIONS.length]); }
   else if (a === 'cycleDay') { if (S && S.host === me.pid && S.phase === 'lobby') B.set(base() + 'dayTime', DAY_OPTIONS[(DAY_OPTIONS.indexOf(durOf(S, 'day')) + 1) % DAY_OPTIONS.length]); }
   else if (a === 'pickRoom') { homeCode = el.dataset.code; render(); const i = document.querySelector((homeName || game === 'caro') ? '[data-bind=code]' : '[data-bind=name]'); if (i) i.focus(); }
   else if (a === 'witchSave') B.set(base() + 'night/witch', { save: true, poison: null });
@@ -1721,7 +1723,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261126ay';
+const APP_V = '20261126az';
 const UPD_NOTE = '<div id="updnote" class="updnote">🔔 Có bản cập nhật mới. Bấm F5 (hoặc Ctrl + Shift + R) để tải lại trang nhé.</div>';
 async function checkNewVersion() {
   try {

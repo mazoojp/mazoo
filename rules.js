@@ -6,7 +6,8 @@
 export const ROLE_NAME = { wolf: 'Sói', seer: 'Tiên tri', guard: 'Bảo vệ', witch: 'Phù thủy', hunter: 'Thợ săn', chief: 'Trưởng làng', vill: 'Dân làng' };
 export const DUR = { night: 30, day: 120, vote: 60, hunter: 20 };   // giây (mặc định)
 export const DAY_OPTIONS = [60, 120, 180, 300, 600];   // thời gian thảo luận ban ngày mà chủ phòng được chọn (giây), lưu ở room.dayTime
-export const durOf = (room, ph) => ph === 'day' && DAY_OPTIONS.includes(room && room.dayTime) ? room.dayTime : DUR[ph];
+export const NIGHT_OPTIONS = [20, 30, 45, 60, 90];   // thời gian ban đêm (cả Sói chọn mục tiêu) mà chủ phòng được chọn, lưu ở room.nightTime
+export const durOf = (room, ph) => ph === 'day' && DAY_OPTIONS.includes(room && room.dayTime) ? room.dayTime : ph === 'night' && NIGHT_OPTIONS.includes(room && room.nightTime) ? room.nightTime : DUR[ph];
 export const MIN = 4, MAX = 20;
 export const AGAIN_LOCK = 8;   // giây: hết ván phải chờ chừng này mới bấm được "Chơi ván mới" (để mọi người kịp xem kết quả, không bị một người bấm kéo cả phòng về phòng chờ)
 export const LOBBY_WAIT = 60;   // giây: thiếu người mà không ai vào thêm thì tự thêm người máy
@@ -152,7 +153,7 @@ export function planStep(room, now) {
   } else if (room.phase === 'day') {
     const al = aliveIds(room), rd = room.ready || {};
     if ((al.length && al.every(id => rd[id])) || expired) {
-      if (room.round === 0) return { u: { phase: 'night', round: 1, night: null, votes: null, ready: null, deadline: now + DUR.night * 1000, announce: 'Đêm 1 bắt đầu. Cả làng đi ngủ…' } };   // buổi sáng mở đầu: không bỏ phiếu, hết giờ là sang đêm 1
+      if (room.round === 0) return { u: { phase: 'night', round: 1, night: null, votes: null, ready: null, deadline: now + durOf(room, 'night') * 1000, announce: 'Đêm 1 bắt đầu. Cả làng đi ngủ…' } };   // buổi sáng mở đầu: không bỏ phiếu, hết giờ là sang đêm 1
       return { u: { phase: 'vote', votes: null, ready: null, deadline: now + DUR.vote * 1000, announce: 'Mọi người bỏ phiếu chọn người bị treo cổ.' } };
     }
   } else if (room.phase === 'vote') {
@@ -247,7 +248,7 @@ function votePlan(room, now) {
   }
   const win = winnerOf(players, roles, dead ? [dead] : []);
   if (win) { u.phase = 'end'; u.winner = win; u.announce = announce; u.deadline = null; u.endedAt = now; u['log/999'] = '🏁 ' + win; }
-  else { u.phase = 'night'; u.round = r + 1; u.announce = announce + `\nĐêm ${r + 1} bắt đầu…`; u.deadline = now + DUR.night * 1000; }
+  else { u.phase = 'night'; u.round = r + 1; u.announce = announce + `\nĐêm ${r + 1} bắt đầu…`; u.deadline = now + durOf(room, 'night') * 1000; }
   return { u, g: win ? gameRecord(room, win, now) : null };
 }
 function hunterPlan(room, now) {   // Thợ săn đã chọn người bắn (hoặc hết giờ): bắn xong mới xét thắng thua rồi sang bước kế tiếp
@@ -261,7 +262,7 @@ function hunterPlan(room, now) {   // Thợ săn đã chọn người bắn (ho�
   const win = winnerOf(players, roles, pick ? [pick] : []);
   if (win) { u.phase = 'end'; u.winner = win; u.announce = note; u.deadline = null; u.endedAt = now; u['log/999'] = '🏁 ' + win; }
   else if (h.src === 'night') { u.phase = 'day'; u.announce = note; u.deadline = now + durOf(room, 'day') * 1000; }
-  else { u.phase = 'night'; u.round = r + 1; u.announce = note + `\nĐêm ${r + 1} bắt đầu…`; u.deadline = now + DUR.night * 1000; }
+  else { u.phase = 'night'; u.round = r + 1; u.announce = note + `\nĐêm ${r + 1} bắt đầu…`; u.deadline = now + durOf(room, 'night') * 1000; }
   return { u, g: win ? gameRecord(room, win, now) : null };
 }
 
