@@ -6,6 +6,7 @@
 export const ROLE_NAME = { wolf: 'Sói', seer: 'Tiên tri', guard: 'Bảo vệ', vill: 'Dân làng' };
 export const DUR = { night: 45, day: 120, vote: 60 };   // giây
 export const MIN = 4, MAX = 12;
+export const AGAIN_LOCK = 8;   // giây: hết ván phải chờ chừng này mới bấm được "Chơi ván mới" (để mọi người kịp xem kết quả, không bị một người bấm kéo cả phòng về phòng chờ)
 export const LOBBY_WAIT = 60;   // giây: thiếu người mà không ai vào thêm thì tự thêm người máy
 export const BOT_NAMES = ['Mít', 'Bơ', 'Na', 'Ổi', 'Xoài', 'Cam', 'Dừa', 'Lê', 'Mận', 'Nho', 'Khế', 'Sấu'];
 
@@ -54,7 +55,7 @@ export function planStep(room, now) {
   if (room.cmd) {
     const c = room.cmd, ids = Object.keys(room.players);
     if (c.type === 'start' && room.phase === 'lobby' && ids.length >= MIN && ids.length <= MAX && (c.by === room.host || !room.players[room.host])) return startPlan(room, ids, now);
-    if (c.type === 'again' && room.phase === 'end') return againPlan(room);
+    if (c.type === 'again' && room.phase === 'end') return room.endedAt && now - room.endedAt < AGAIN_LOCK * 1000 ? { u: { cmd: null } } : againPlan(room);
     return { u: { cmd: null } };   // lệnh không hợp lệ: bỏ
   }
 
@@ -104,15 +105,16 @@ export function planStep(room, now) {
 }
 
 function startPlan(room, ids, now) {
-  const roles = assignRoles(ids), u = { cmd: null, phase: 'night', round: 1, night: null, votes: null, ready: null, botMem: null, seerLog: null, winner: null, chat: null, deadline: now + DUR.night * 1000, announce: 'Đêm 1 bắt đầu. Cả làng đi ngủ…' };
+  const roles = assignRoles(ids), u = { cmd: null, phase: 'night', round: 1, night: null, votes: null, ready: null, botMem: null, seerLog: null, winner: null, log: null, endedAt: null, chat: null, deadline: now + DUR.night * 1000, announce: 'Đêm 1 bắt đầu. Cả làng đi ngủ…' };
   ids.forEach(id => { u['roles/' + id] = roles[id]; u['players/' + id + '/alive'] = true; u['players/' + id + '/ready'] = null; });
   return { u };
 }
 function againPlan(room) {
-  const u = { cmd: null, phase: 'lobby', round: 0, roles: null, night: null, votes: null, ready: null, botMem: null, seerLog: null, winner: null, chat: null, announce: null, deadline: null };
+  const u = { cmd: null, phase: 'lobby', round: 0, roles: null, night: null, votes: null, ready: null, botMem: null, seerLog: null, winner: null, log: null, endedAt: null, chat: null, announce: null, deadline: null };
   Object.entries(room.players || {}).forEach(([id, p]) => { u['players/' + id + '/alive'] = true; u['players/' + id + '/ready'] = p.bot ? true : null; });   // bot luôn sẵn sàng
   return { u };
 }
+const logKey = n => String(n).padStart(3, '0');   // nhật ký diễn biến: 001 = đêm 1, 002 = ngày 1, ...
 function nightPlan(room, now) {
   const players = room.players, roles = room.roles || {}, r = room.round, n = room.night || {}, al = aliveIds(room);
   const wv = {};   // chỉ tính phiếu của Sói còn sống nhắm vào người còn sống
@@ -128,7 +130,8 @@ function nightPlan(room, now) {
   else { dead = target; u['players/' + dead + '/alive'] = false; announce = `Đêm qua ${players[dead].name} đã bị Sói cắn chết.`; }
   const win = winnerOf(players, roles, dead);
   if (win) { u.phase = 'end'; u.winner = win; u.deadline = null; } else { u.phase = 'day'; u.deadline = now + DUR.day * 1000; }
-  u.announce = announce;
+  u.announce = announce; u['log/' + logKey(2 * r - 1)] = announce;
+  if (win) u.endedAt = now;
   return { u };
 }
 function votePlan(room, now) {
@@ -136,10 +139,11 @@ function votePlan(room, now) {
   const v = {}; Object.entries(room.votes || {}).forEach(([id, t]) => { if (al.includes(id) && players[t] && players[t].alive) v[id] = t; });
   const t = tally(v), u = { night: null, votes: null, ready: null };
   let dead = null, announce;
-  if (t.top.length === 1 && t.max > 0) { dead = t.top[0]; u['players/' + dead + '/alive'] = false; announce = `Làng treo cổ ${players[dead].name} (${ROLE_NAME[roles[dead]]}).`; }
+  if (t.top.length === 1 && t.max > 0) { dead = t.top[0]; u['players/' + dead + '/alive'] = false; announce = `Làng treo cổ ${players[dead].name}${room.hideRoles ? '.' : ` (${ROLE_NAME[roles[dead]]}).`}`;   /* hideRoles: chế độ không lộ vai khi chết */ }
   else announce = 'Phiếu hòa hoặc không ai bỏ phiếu, hôm nay không ai bị treo cổ.';
   const win = winnerOf(players, roles, dead);
-  if (win) { u.phase = 'end'; u.winner = win; u.announce = announce; u.deadline = null; }
+  u['log/' + logKey(2 * r)] = announce;
+  if (win) { u.phase = 'end'; u.winner = win; u.announce = announce; u.deadline = null; u.endedAt = now; }
   else { u.phase = 'night'; u.round = r + 1; u.announce = announce + `\nĐêm ${r + 1} bắt đầu…`; u.deadline = now + DUR.night * 1000; }
   return { u };
 }
