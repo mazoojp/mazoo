@@ -176,13 +176,15 @@ function switchPlan(room, c, now) {
 }
 function startPlan(room, ids, now) {
   const roles = assignRoles(ids), u = { cmd: null, phase: 'day', round: 0, night: null, votes: null, ready: null, botMem: null, seerLog: null, winner: null, log: null, endedAt: null, chat: null, deadline: now + durOf(room, 'day') * 1000, announce: 'Ván bắt đầu! Buổi sáng mở đầu: mọi người làm quen và trò chuyện với nhau. Hết giờ thì trời tối, Đêm 1 bắt đầu.' };   // mở đầu bằng một buổi sáng nói chuyện (không bỏ phiếu) rồi mới sang đêm 1
-  u.dead = null; u.witchUsed = null; u.hunter = null; u.hunterShot = null;
+  u.dead = null; u.witchUsed = null; u.hunter = null; u.hunterShot = null; u.last = null;
   ids.forEach(id => { u['roles/' + id] = roles[id]; u['players/' + id + '/alive'] = true; u['players/' + id + '/ready'] = null; const pl = room.players[id]; if (pl) u['roster/' + id] = { name: pl.name, t: pl.t || 0, ...(pl.bot ? { bot: true } : {}) }; });
   return { u };
 }
 function againPlan(room) {
   const u = { cmd: null, phase: 'lobby', round: 0, roles: null, night: null, votes: null, ready: null, botMem: null, seerLog: null, winner: null, log: null, endedAt: null, roster: null, dead: null, witchUsed: null, hunter: null, hunterShot: null, chat: null, announce: null, deadline: null };
   Object.entries(room.players || {}).forEach(([id, p]) => { u['players/' + id + '/alive'] = true; u['players/' + id + '/ready'] = p.bot ? true : null; });   // bot luôn sẵn sàng
+  // giữ lại kết quả ván vừa rồi (người thắng, diễn biến, vai từng người) để phòng chờ vẫn hiện cho đến khi ván mới bắt đầu
+  if (room.winner) u.last = { winner: room.winner, round: room.round || 0, t: room.endedAt || 0, log: room.log || {}, p: Object.entries(room.players || {}).sort((a, b) => (a[1].t || 0) - (b[1].t || 0)).map(([id, p]) => ({ n: p.name, r: (room.roles || {})[id] || null, a: !!p.alive, ...(p.bot ? { bot: true } : {}) })) };
   return { u };
 }
 const lk = (r, slot) => String(r).padStart(2, '0') + slot;   // khóa nhật ký diễn biến: <vòng 2 số><phần>: 1 = đêm, 2 = Thợ săn sau đêm, 3 = ngày (bỏ phiếu), 4 = Thợ săn sau bỏ phiếu
