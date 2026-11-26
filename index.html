@@ -198,7 +198,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126ap';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126aq';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -661,6 +661,7 @@ function lobbyHTML() {
       <p class="note" style="text-align:center;margin-top:10px">${hint}</p>
       <p class="note" id="fillhint" style="text-align:center"></p>
       <p class="note" style="text-align:center">☀️ Thảo luận ban ngày: <b>${fmtSec(durOf(S, 'day'))}</b> · 🎭 Khi chết: ${S.hideRoles ? 'KHÔNG lộ vai (chế độ căng)' : 'lộ vai (luật gốc)'}</p>
+      ${lastGameInline()}
     </div>
     <div class="card"><div class="sec">Người chơi (${n}/${MAX})<span class="r">${rdy} đã sẵn sàng</span></div>${playersGrid(false, true)}
       <div class="row" style="margin-top:12px">
@@ -670,7 +671,6 @@ function lobbyHTML() {
         ${host && can && rdy < n ? '<button class="primary" data-act="start">Bắt đầu ngay (chủ phòng)</button>' : ''}
       </div>
     </div>
-  ${lastGameHTML()}
   </div><div class="stack">${chatHTML()}</div></div>`;
 }
 
@@ -756,6 +756,13 @@ function recapLines(L) {
 function recapHTML() {   // diễn biến ván (cập nhật suốt ván)
   const L = S.log || {};
   return Object.keys(L).length ? `<div class="card" id="recap" style="max-height:210px;overflow-y:auto"><div class="sec">📜 Diễn biến ván</div>${recapLines(L)}</div>` : '';
+}
+function lastGameInline() {   // kết quả ván vừa rồi, gọn, nằm ngay trong ô Số phòng
+  const g = S.last; if (!g) return '';
+  return `<div style="margin-top:14px;padding-top:12px;border-top:1px solid #e5e7eb;text-align:left">
+    <div class="sec" style="margin-bottom:6px">🏁 Kết quả ván vừa rồi</div><p style="font-weight:700;margin:0 0 8px">${esc(g.winner)}</p>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">${(g.p || []).map(x => `<span class="chip ${x.a ? '' : 'mute'}" style="height:auto;min-height:26px;padding:3px 10px">${esc(x.n)}${x.r ? ` · <b class="t-${x.r}">${ROLE_NAME[x.r] || ''}</b>` : ''}${x.a ? '' : ' 💀'}</span>`).join('')}</div>
+    <div style="max-height:170px;overflow-y:auto">${recapLines(g.log)}</div></div>`;
 }
 function lastGameHTML() {   // phòng chờ vẫn hiện kết quả ván vừa rồi cho tới khi ván mới bắt đầu
   const g = S.last; if (!g) return '';
@@ -1699,7 +1706,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261126ap';
+const APP_V = '20261126aq';
 async function checkNewVersion() {
   try {
     const t = await (await fetch(location.pathname + '?_v=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/const APP_V = '([^']+)'/);
