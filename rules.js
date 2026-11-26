@@ -87,9 +87,13 @@ export function restorePlan(room) {
   }
   return Object.keys(u).length ? { u } : null;
 }
+const lastSpecAlive = (room, id) => (room.seenAt && room.seenAt[id]) || (room.seen || {})[id] || ((room.spectators || {})[id] || {}).t || 0;
+export const SPEC_IDLE_MS = 10 * 60 * 1000;   // khán giả im (không còn nhịp tim) quá chừng này thì bị dọn khỏi danh sách
 export function planStep(room, now) {
   if (!room) return null;
   const rs = restorePlan(room); if (rs) return rs;
+  const staleSp = Object.keys(room.spectators || {}).filter(id => now - lastSpecAlive(room, id) > SPEC_IDLE_MS);
+  if (staleSp.length) { const u = {}; staleSp.forEach(id => { u['spectators/' + id] = null; u['seen/' + id] = null; }); return { u }; }
   if (!room.players) return null;
 
   // 1) Lệnh do người chơi gửi (bắt đầu / ván mới)
@@ -336,12 +340,12 @@ export function runBot(B, { log = console.log, now = () => Date.now(), maxAgeMs 
   const withSeenAt = (code, room) => {
     if (!room || !room.players) return room;
     const t = track[code] || (track[code] = {}), seenAt = {}, nw = now();
-    for (const id of Object.keys(room.players)) {
+    for (const id of [...Object.keys(room.players), ...Object.keys(room.spectators || {})]) {
       const v = (room.seen || {})[id], o = t[id];
       if (!o) t[id] = { v, at: nw }; else if (o.v !== v) { o.v = v; o.at = nw; }
       seenAt[id] = t[id].at;
     }
-    for (const id of Object.keys(t)) if (!(id in room.players)) delete t[id];
+    for (const id of Object.keys(t)) if (!(id in room.players) && !(id in (room.spectators || {}))) delete t[id];
     return { ...room, seenAt };
   };
   const tick = async () => {

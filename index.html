@@ -203,7 +203,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126ax';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126ay';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -296,7 +296,8 @@ function newCode() { const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; f
 /* ============ Vào / rời phòng ============ */
 const CODE_RE = /^[A-Z0-9]{2,8}$/;
 const ONLINE_MS = 30000;   // quá 30 giây không có nhịp tim thì coi là đã ngắt kết nối
-const isOnline = (room, pid) => { const t = (room.seen || {})[pid]; return !!t && tnow() - t < ONLINE_MS; };
+const onlineSpecs = room => Object.entries(room.spectators || {}).filter(([id]) => isOnline(room, id, 45000)).map(([, x]) => x);   // chỉ tính khán giả còn mở trang (có nhịp tim), không tính người đã thoát
+const isOnline = (room, pid, ms = ONLINE_MS) => { const t = (room.seen || {})[pid]; return !!t && tnow() - t < ms; };
 async function joinOrCreate() {   // phòng có sẵn thì vào, chưa có thì tạo phòng mới với đúng số phòng đó
   const name = homeName.trim(), code = homeCode.replace(/\s+/g, '').toUpperCase();
   if (!name) return setErr('Nhập tên của bạn.');
@@ -380,7 +381,7 @@ function enter(m) {
   render();
 }
 let lastSig = '', beatSent = false;
-const beat = () => { if (me && !me.spec && S) B.set(base() + 'seen/' + me.pid, tnow()); };   // nhịp tim: báo mình còn online
+const beat = () => { if (me && S) B.set(base() + 'seen/' + me.pid, tnow()); };   // cả người chơi lẫn khán giả đều báo còn online   // nhịp tim: báo mình còn online
 setInterval(beat, 3000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) beat(); });   // quay lại tab: báo online ngay
 function leaveLocal() { if (unwatch) unwatch(); unwatch = null; S = null; me = null; store().removeItem('masoi_me'); }
@@ -719,7 +720,7 @@ async function invite() {
 /* ---------- Màn hình người xem ---------- */
 function specHTML() {
   const p = S.players || {}, roles = S.roles || {}, nm = id => (p[id] ? esc(p[id].name) : '?');
-  const alive = Object.keys(p).filter(id => p[id].alive), specs = Object.values(S.spectators || {});
+  const alive = Object.keys(p).filter(id => p[id].alive), specs = onlineSpecs(S);
   const PH = { lobby: ['⏳ Phòng chờ', 'mute'], hunter: ['🏹 Thợ săn bắn', 'red'], night: ['🌙 Ban đêm', 'mute'], day: ['☀️ Ban ngày', 'amber'], vote: ['🗳️ Bỏ phiếu', 'red'], end: ['🏁 Kết thúc', 'green'] }[S.phase];
   const why = me.why === 'full' ? `Phòng đã đủ ${MAX} người nên bạn vào Khán đài.` : me.why === 'started' ? 'Ván đã bắt đầu nên bạn vào Khán đài.' : me.why === 'self' ? 'Bạn đã xuống Khán đài.' : 'Bạn đang ở Khán đài.';
   let out = `<div class="status"><span class="chip ${PH[1]}">${PH[0]}</span>${S.phase !== 'lobby' ? `<span class="chip mute">${S.round === 0 ? 'Mở đầu ván' : 'Đêm thứ ' + S.round}</span>` : ''}<span class="chip" id="cd"></span><span class="chip mute">${alive.length}/${Object.keys(p).length} còn sống</span></div>`;
@@ -796,7 +797,7 @@ function gameHTML() {
   const p = S.players || {}, roles = S.roles || {}, myRole = roles[me.pid], iAlive = p[me.pid] && p[me.pid].alive;
   const alive = Object.keys(p).filter(id => p[id].alive);
   const PH = { hunter: ['🏹 Thợ săn bắn', 'red'], night: ['🌙 Ban đêm', 'mute'], day: ['☀️ Ban ngày', 'amber'], vote: ['🗳️ Bỏ phiếu', 'red'], end: ['🏁 Kết thúc', 'green'] }[S.phase];
-  let out = `<div class="status"><span class="chip ${PH[1]}">${PH[0]}</span><span class="chip mute">${S.round === 0 ? 'Mở đầu ván' : 'Đêm thứ ' + S.round}</span><span class="chip" id="cd"></span><span class="chip mute">${alive.length}/${Object.keys(p).length} còn sống</span>${S.hideRoles ? '<span class="chip mute">🎭 Ẩn vai khi chết</span>' : ''}${Object.keys(S.spectators || {}).length ? `<span class="chip mute">👀 ${Object.keys(S.spectators).length} khán giả</span>` : ''}</div>`;
+  let out = `<div class="status"><span class="chip ${PH[1]}">${PH[0]}</span><span class="chip mute">${S.round === 0 ? 'Mở đầu ván' : 'Đêm thứ ' + S.round}</span><span class="chip" id="cd"></span><span class="chip mute">${alive.length}/${Object.keys(p).length} còn sống</span>${S.hideRoles ? '<span class="chip mute">🎭 Ẩn vai khi chết</span>' : ''}${onlineSpecs(S).length ? `<span class="chip mute">👀 ${onlineSpecs(S).length} khán giả</span>` : ''}</div>`;
   out += rolesSummary() + todoHTML() + '\u0001ACT\u0001' + recapHTML();   // \u0001ACT\u0001: chỗ để phần chọn hành động (cắn/soi/bảo vệ/bỏ phiếu/bắn) được đôn lên ngay dưới hướng dẫn cho dễ bấm   // dòng "ván này có" cố định trên cùng; diễn biến (khi đã có) nằm trên thẻ vai và cập nhật ngay trong lúc chơi
   const roleCard = !myRole ? '' : `<div class="card role ${showRole && myRole ? myRole : ''} ${!roleSeen && myRole ? 'pulse' : ''}" data-act="toggleRole">${showRole && myRole
     ? `<div class="note">Vai của bạn</div><div class="big t-${myRole}">${ROLE_NAME[myRole]}</div><div class="note">${ROLE_HINT[myRole]}</div><div class="note" style="margin-top:6px">(bấm để ẩn)</div>`
@@ -1418,7 +1419,7 @@ function caroEnter(m) {
   });
   render();
 }
-const caroBeat = () => { if (cme && !cme.spec && C) B.set(cbase() + 'seen/' + cme.pid, Date.now()); };
+const caroBeat = () => { if (cme && C) B.set(cbase() + 'seen/' + cme.pid, Date.now()); };
 setInterval(caroBeat, 10000);
 function caroLeaveLocal() { if (cUnwatch) cUnwatch(); cUnwatch = null; C = null; cme = null; store().removeItem('caro_me'); }
 async function caroLeave() {
@@ -1549,7 +1550,7 @@ function caroRoomHTML() {
     cells.push(`<button class="cc ${v ? v.toLowerCase() : ''} ${C.last === k ? 'last' : ''} ${win.has(k) ? 'win' : ''} ${!v && canMove ? 'my' : ''}" data-act="cell" data-r="${r}" data-c="${c}" data-m="${mark || ''}" ${v || !canMove ? 'disabled' : ''}>${v}</button>`);
   }
   const prow = m => { const id = byMark(m); return `<div class="pl2 ${C.phase === 'play' && C.turn === m ? 'turn' : ''}"><span class="mk ${m.toLowerCase()}">${m}</span>${id ? avatar(players[id].name, '', id) : ''}<div><b>${nm(id)}${id === cme.pid ? ' (bạn)' : ''}</b><div class="note">${id ? (C.phase === 'play' && C.turn === m ? 'đang đến lượt' : '') : 'chờ đối thủ'}</div></div></div>`; };
-  const specs = Object.values(C.spectators || {});
+  const specs = Object.entries(C.spectators || {}).filter(([id]) => { const t = (C.seen || {})[id]; return !!t && Date.now() - t < 45000; }).map(([, x]) => x);
   const result = C.phase === 'end' ? (C.winner === 'draw' ? 'Hòa' : `${nm(byMark(C.winner))} (${C.winner}) thắng`) : '';
   return `<div class="cols"><div class="stack">
     <div class="status"><span class="chip ${C.phase === 'play' ? 'amber' : C.phase === 'end' ? 'green' : 'mute'}">${C.phase === 'play' ? '🎮 Đang chơi' : C.phase === 'end' ? '🏁 Kết thúc' : '⏳ Chờ đối thủ'}</span><span class="chip mute">Nước thứ ${C.moves || 0}</span>${result ? `<span class="chip green">${result}</span>` : ''}</div>
@@ -1689,7 +1690,7 @@ function roomListItems() {
   const t = tnow(), out = [];
   for (const [code, r] of Object.entries(rlRaw || {})) {
     if (!r || !r.players) continue;
-    const pl = Object.entries(r.players), seen = r.seen || {}, spec = Object.keys(r.spectators || {}).length;
+    const pl = Object.entries(r.players), seen = r.seen || {}, spec = Object.keys(r.spectators || {}).filter(id => seen[id] && t - seen[id] < 45000).length;
     const onlineH = pl.filter(([id, p]) => !p.bot && seen[id] && t - seen[id] < ONLINE_MS + 15000).length;
     if (!onlineH) continue;   // không còn ai online thì không hiện
     const host = r.players[r.host] ? r.players[r.host].name : '';
@@ -1720,7 +1721,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261126ax';
+const APP_V = '20261126ay';
 const UPD_NOTE = '<div id="updnote" class="updnote">🔔 Có bản cập nhật mới. Bấm F5 (hoặc Ctrl + Shift + R) để tải lại trang nhé.</div>';
 async function checkNewVersion() {
   try {
