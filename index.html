@@ -203,7 +203,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126av';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126aw';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -1721,13 +1721,16 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261126av';
+const APP_V = '20261126aw';
 const UPD_NOTE = '<div id="updnote" class="updnote">🔔 Có bản cập nhật mới. Bấm F5 (hoặc Ctrl + Shift + R) để tải lại trang nhé.</div>';
 async function checkNewVersion() {
   try {
     const t = await (await fetch(location.pathname + '?_v=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/const APP_V = '([^']+)'/);
-    if (!m || m[1] === APP_V || newVer) return;
-    newVer = true;   // chỉ nhắc, không tự tải lại (tránh làm gián đoạn ván); thêm thẳng dòng nhắc vào trang, không vẽ lại cả trang
+    if (!m || m[1] === APP_V) return;
+    const busy = me && !me.spec && S && S.phase !== 'lobby' && S.phase !== 'end';   // người đang giữa ván thì không tự tải lại (tránh gián đoạn)
+    if (!busy) { location.reload(); return; }   // trang chủ, phòng chờ, khán đài, hết ván: tự tải lại bản mới
+    if (newVer) return;
+    newVer = true;   // giữa ván: chỉ hiện dòng cam nhỏ nhắc F5, thêm thẳng vào trang, không vẽ lại cả trang
     const pg = document.querySelector('.page'); if (pg && !document.getElementById('updnote')) pg.insertAdjacentHTML('afterbegin', UPD_NOTE);
   } catch (e) {}
 }
