@@ -3,8 +3,8 @@
 //
 // "Backend" B là đối tượng có: get(path), set(path, value), update({path: value}), watch(path, cb).
 
-export const ROLE_NAME = { wolf: 'Sói', seer: 'Tiên tri', guard: 'Bảo vệ', vill: 'Dân làng' };
-export const DUR = { night: 20, day: 120, vote: 60 };   // giây (mặc định)
+export const ROLE_NAME = { wolf: 'Sói', seer: 'Tiên tri', guard: 'Bảo vệ', witch: 'Phù thủy', hunter: 'Thợ săn', vill: 'Dân làng' };
+export const DUR = { night: 20, day: 120, vote: 60, hunter: 20 };   // giây (mặc định)
 export const DAY_OPTIONS = [60, 120, 180, 300, 600];   // thời gian thảo luận ban ngày mà chủ phòng được chọn (giây), lưu ở room.dayTime
 export const durOf = (room, ph) => ph === 'day' && DAY_OPTIONS.includes(room && room.dayTime) ? room.dayTime : DUR[ph];
 export const MIN = 4, MAX = 20;
@@ -25,7 +25,7 @@ function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.fl
 
 export function assignRoles(ids) {
   const n = ids.length, wolves = n <= 5 ? 1 : n <= 8 ? 2 : n <= 12 ? 3 : n <= 16 ? 4 : 5;
-  const roles = Array(wolves).fill('wolf'); roles.push('seer'); if (n >= 6) roles.push('guard');
+  const roles = Array(wolves).fill('wolf'); roles.push('seer'); if (n >= 6) roles.push('guard'); if (n >= 8) roles.push('witch'); if (n >= 10) roles.push('hunter');   // đông người thì thêm Phù thủy (từ 8), Thợ săn (từ 10)
   while (roles.length < n) roles.push('vill');
   shuffle(roles); const out = {}; ids.forEach((id, i) => out[id] = roles[i]); return out;
 }
@@ -49,15 +49,16 @@ export function tallyScores(wg) {   // -> mảng xếp hạng: nhiều ván th�
   for (const rec of Object.values(wg || {})) {
     if (!rec || !rec.p) continue;
     for (const [k, x] of Object.entries(rec.p)) {
-      const a = T[k] || (T[k] = { key: k, name: x.n, games: 0, wolf: 0, vill: 0, seer: 0, guard: 0, win: 0, loss: 0 });
+      const a = T[k] || (T[k] = { key: k, name: x.n, games: 0, wolf: 0, vill: 0, seer: 0, guard: 0, witch: 0, hunter: 0, win: 0, loss: 0 });
       a.name = x.n; a.games++; if (a[x.r] != null) a[x.r]++;
       if ((x.r === 'wolf') === (rec.w === 'wolf')) a.win++; else a.loss++;
     }
   }
   return Object.values(T).sort((a, b) => b.win - a.win || b.games - a.games || String(a.name).localeCompare(String(b.name)));
 }
-export function winnerOf(players, roles, deadId) {
-  const alive = Object.keys(players).filter(id => players[id].alive && id !== deadId);
+export function winnerOf(players, roles, deadId) {   // deadId: một người hoặc một mảng người vừa chết (chưa kịp ghi alive=false)
+  const gone = Array.isArray(deadId) ? deadId : [deadId];
+  const alive = Object.keys(players).filter(id => players[id].alive && !gone.includes(id));
   const wolves = alive.filter(id => roles[id] === 'wolf').length, others = alive.length - wolves;
   if (wolves === 0) return 'Dân làng thắng! Đã diệt hết Sói.';
   if (wolves >= others) return 'Sói thắng! Số Sói đã bằng hoặc hơn dân.';
@@ -78,7 +79,7 @@ export const LOBBY_IDLE_MS = 10000;   // phòng chờ: 10 giây không có nhị
 // Giữa ván (đêm/ngày/bỏ phiếu) không ai bị xóa khỏi danh sách người chơi (thoát giữa ván chỉ là offline). Nếu danh sách bị mất người
 // (máy khách lỗi/ngủ rồi ghi đè bằng dữ liệu cũ...) thì khôi phục từ bản sao `roster` ghi lúc bắt đầu ván.
 export function restorePlan(room) {
-  if (!room || !room.roster || !room.roles || !['night', 'day', 'vote'].includes(room.phase)) return null;
+  if (!room || !room.roster || !room.roles || !['night', 'day', 'vote', 'hunter'].includes(room.phase)) return null;
   const pl = room.players || {}, dead = room.dead || {}, u = {};
   for (const id of Object.keys(room.roles)) {
     const r = room.roster[id]; if (!r || pl[id]) continue;
@@ -132,9 +133,11 @@ export function planStep(room, now) {
   if (room.phase === 'night') {
     const roles = room.roles || {}, n = room.night || {}, wv = n.wolf || {}, al = aliveIds(room);
     const wolves = al.filter(id => roles[id] === 'wolf');
-    const seer = al.find(id => roles[id] === 'seer'), guard = al.find(id => roles[id] === 'guard');
-    const all = wolves.length > 0 && wolves.every(id => wv[id]) && (!seer || n.seer) && (!guard || n.guard);
+    const seer = al.find(id => roles[id] === 'seer'), guard = al.find(id => roles[id] === 'guard'), witch = al.find(id => roles[id] === 'witch');
+    const wolvesDone = wolves.length > 0 && wolves.every(id => wv[id]);
+    const all = wolvesDone && (!seer || n.seer) && (!guard || n.guard) && (!witch || n.witch);
     if (all || expired) return nightPlan(room, now);
+    if (wolvesDone && !n.target) return { u: { 'night/target': pickTarget(room) || 'none' } };   // Sói chọn xong: chốt mục tiêu để Phù thủy biết mà quyết định
   } else if (room.phase === 'day') {
     const al = aliveIds(room), rd = room.ready || {};
     if ((al.length && al.every(id => rd[id])) || expired) {
@@ -144,6 +147,8 @@ export function planStep(room, now) {
   } else if (room.phase === 'vote') {
     const al = aliveIds(room), v = room.votes || {};
     if ((al.length && al.every(id => v[id])) || expired) return votePlan(room, now);
+  } else if (room.phase === 'hunter') {
+    if (room.hunterShot || expired) return hunterPlan(room, now);
   }
   return null;
 }
@@ -164,34 +169,49 @@ function switchPlan(room, c, now) {
 }
 function startPlan(room, ids, now) {
   const roles = assignRoles(ids), u = { cmd: null, phase: 'day', round: 0, night: null, votes: null, ready: null, botMem: null, seerLog: null, winner: null, log: null, endedAt: null, chat: null, deadline: now + durOf(room, 'day') * 1000, announce: 'Ván bắt đầu! Buổi sáng mở đầu: mọi người làm quen và trò chuyện với nhau. Hết giờ thì trời tối, Đêm 1 bắt đầu.' };   // mở đầu bằng một buổi sáng nói chuyện (không bỏ phiếu) rồi mới sang đêm 1
-  u.dead = null;
+  u.dead = null; u.witchUsed = null; u.hunter = null; u.hunterShot = null;
   ids.forEach(id => { u['roles/' + id] = roles[id]; u['players/' + id + '/alive'] = true; u['players/' + id + '/ready'] = null; const pl = room.players[id]; if (pl) u['roster/' + id] = { name: pl.name, t: pl.t || 0, ...(pl.bot ? { bot: true } : {}) }; });
   return { u };
 }
 function againPlan(room) {
-  const u = { cmd: null, phase: 'lobby', round: 0, roles: null, night: null, votes: null, ready: null, botMem: null, seerLog: null, winner: null, log: null, endedAt: null, roster: null, dead: null, chat: null, announce: null, deadline: null };
+  const u = { cmd: null, phase: 'lobby', round: 0, roles: null, night: null, votes: null, ready: null, botMem: null, seerLog: null, winner: null, log: null, endedAt: null, roster: null, dead: null, witchUsed: null, hunter: null, hunterShot: null, chat: null, announce: null, deadline: null };
   Object.entries(room.players || {}).forEach(([id, p]) => { u['players/' + id + '/alive'] = true; u['players/' + id + '/ready'] = p.bot ? true : null; });   // bot luôn sẵn sàng
   return { u };
 }
-const logKey = n => String(n).padStart(3, '0');   // nhật ký diễn biến: 001 = đêm 1, 002 = ngày 1, ...
-function nightPlan(room, now) {
-  const players = room.players, roles = room.roles || {}, r = room.round, n = room.night || {}, al = aliveIds(room);
-  const wv = {};   // chỉ tính phiếu của Sói còn sống nhắm vào người còn sống
+const lk = (r, slot) => String(r).padStart(2, '0') + slot;   // khóa nhật ký diễn biến: <vòng 2 số><phần>: 1 = đêm, 2 = Thợ săn sau đêm, 3 = ngày (bỏ phiếu), 4 = Thợ săn sau bỏ phiếu
+function pickTarget(room) {   // mục tiêu của Sói: số phiếu cao nhất (hòa thì bốc ngẫu nhiên), chỉ tính Sói còn sống nhắm vào người còn sống
+  const players = room.players, roles = room.roles || {}, n = room.night || {}, al = aliveIds(room), wv = {};
   Object.entries(n.wolf || {}).forEach(([id, t]) => { if (al.includes(id) && roles[id] === 'wolf' && players[t] && players[t].alive) wv[id] = t; });
-  const t = tally(wv), target = t.top.length && t.max > 0 ? t.top[Math.floor(Math.random() * t.top.length)] : null;
-  const guardAlive = al.some(id => roles[id] === 'guard');
-  const saved = !!(target && guardAlive && n.guard === target);
-  const seerId = al.find(id => roles[id] === 'seer');
+  const t = tally(wv); return t.top.length && t.max > 0 ? t.top[Math.floor(Math.random() * t.top.length)] : null;
+}
+function nightPlan(room, now) {
+  const players = room.players, roles = room.roles || {}, r = room.round, n = room.night || {}, al = aliveIds(room), nm = id => players[id].name;
+  const target = n.target ? (n.target !== 'none' && players[n.target] && players[n.target].alive ? n.target : null) : pickTarget(room);
+  const guardSave = !!(target && al.some(id => roles[id] === 'guard') && n.guard === target);
+  const witchId = al.find(id => roles[id] === 'witch'), wd = n.witch || {}, used = room.witchUsed || {};
+  const healOk = !!(witchId && wd.save && !used.heal && target);   // thuốc cứu: dùng một lần cả ván
+  const poisonT = witchId && wd.poison && !used.poison && players[wd.poison] && players[wd.poison].alive ? wd.poison : null;   // thuốc độc: một lần, Bảo vệ không cản được
+  const saved = guardSave || healOk;
   const u = { night: null, votes: null, ready: null };
+  const seerId = al.find(id => roles[id] === 'seer');
   if (seerId && n.seer && players[n.seer]) u['seerLog/' + r] = `Đêm ${r}: ${players[n.seer].name} ${roles[n.seer] === 'wolf' ? 'LÀ SÓI' : 'không phải Sói'}.`;
-  let dead = null, announce, note;   // announce: thông báo đầu trang; note: dòng ngắn trong nhật ký diễn biến
-  if (!target) { announce = 'Đêm qua Sói không cắn ai nên không ai chết.'; note = 'Sói không cắn ai nên không ai chết.'; }
-  else if (saved) { announce = 'Đêm qua có người bị Sói cắn nhưng được Bảo vệ cứu nên không ai chết.'; note = 'Có người bị Sói cắn nhưng được Bảo vệ cứu nên không ai chết.'; }
-  else { dead = target; u['players/' + dead + '/alive'] = false; u['dead/' + dead] = true; announce = `Đêm qua ${players[dead].name} đã bị Sói cắn chết.`; note = `${players[dead].name} bị Sói cắn chết.`; }
-  const win = winnerOf(players, roles, dead);
-  if (win) { u.phase = 'end'; u.winner = win; u.deadline = null; } else { u.phase = 'day'; u.deadline = now + durOf(room, 'day') * 1000; }
-  u.announce = announce; u['log/' + logKey(2 * r - 1)] = note;
-  if (win) { u.endedAt = now; u['log/999'] = '🏁 ' + win; }
+  if (healOk) u['witchUsed/heal'] = true;
+  if (poisonT) u['witchUsed/poison'] = true;
+  const by = guardSave && healOk ? 'Bảo vệ và Phù thủy' : healOk ? 'Phù thủy' : 'Bảo vệ';
+  const wolfTxt = !target ? 'Sói không cắn ai' : saved ? `Có người bị Sói cắn nhưng được ${by} cứu` : `${nm(target)} bị Sói cắn chết`;
+  const note = poisonT ? (target && !saved ? `${wolfTxt} và ${nm(poisonT)} bị đầu độc chết.` : `${wolfTxt}, còn ${nm(poisonT)} bị đầu độc chết.`) : (target && !saved ? `${wolfTxt}.` : `${wolfTxt} nên không ai chết.`);
+  const announce = 'Đêm qua ' + note.replace(/^Có/, 'có');
+  const deaths = []; if (target && !saved) deaths.push(target); if (poisonT && !deaths.includes(poisonT)) deaths.push(poisonT);
+  deaths.forEach(d => { u['players/' + d + '/alive'] = false; u['dead/' + d] = true; });
+  u['log/' + lk(r, 1)] = note; u.announce = announce;
+  const hunterId = deaths.find(id => roles[id] === 'hunter' && id !== poisonT);   // Thợ săn bị đầu độc thì không bắn được
+  if (hunterId) {   // chờ Thợ săn chọn người bắn rồi mới xét thắng thua và sang ngày
+    u.phase = 'hunter'; u.hunter = { id: hunterId, src: 'night' }; u.hunterShot = null; u.deadline = now + DUR.hunter * 1000;
+    u.announce = announce + `\nThợ săn ${nm(hunterId)} bị loại và được bắn một người trước khi gục.`;
+    return { u, g: null };
+  }
+  const win = winnerOf(players, roles, deaths);
+  if (win) { u.phase = 'end'; u.winner = win; u.deadline = null; u.endedAt = now; u['log/999'] = '🏁 ' + win; } else { u.phase = 'day'; u.deadline = now + durOf(room, 'day') * 1000; }
   return { u, g: win ? gameRecord(room, win, now) : null };
 }
 function votePlan(room, now) {
@@ -202,10 +222,29 @@ function votePlan(room, now) {
   if (t.top.length === 1 && t.max > 0) { dead = t.top[0]; u['players/' + dead + '/alive'] = false; u['dead/' + dead] = true; announce = `Làng treo cổ ${players[dead].name}${room.hideRoles ? '.' : ` (${ROLE_NAME[roles[dead]]}).`}`;   /* hideRoles: chế độ không lộ vai khi chết */ }
   else announce = 'Phiếu hòa hoặc không ai bỏ phiếu, hôm nay không ai bị treo cổ.';
   note = dead ? announce : 'Hòa phiếu, không ai bị treo cổ.';
-  const win = winnerOf(players, roles, dead);
-  u['log/' + logKey(2 * r)] = note;
+  u['log/' + lk(r, 3)] = note;
+  if (dead && roles[dead] === 'hunter') {   // Thợ săn bị treo cổ: được bắn một người trước khi gục
+    u.phase = 'hunter'; u.hunter = { id: dead, src: 'vote' }; u.hunterShot = null; u.deadline = now + DUR.hunter * 1000;
+    u.announce = announce + `\nThợ săn ${players[dead].name} được bắn một người trước khi gục.`;
+    return { u, g: null };
+  }
+  const win = winnerOf(players, roles, dead ? [dead] : []);
   if (win) { u.phase = 'end'; u.winner = win; u.announce = announce; u.deadline = null; u.endedAt = now; u['log/999'] = '🏁 ' + win; }
   else { u.phase = 'night'; u.round = r + 1; u.announce = announce + `\nĐêm ${r + 1} bắt đầu…`; u.deadline = now + DUR.night * 1000; }
+  return { u, g: win ? gameRecord(room, win, now) : null };
+}
+function hunterPlan(room, now) {   // Thợ săn đã chọn người bắn (hoặc hết giờ): bắn xong mới xét thắng thua rồi sang bước kế tiếp
+  const players = room.players, roles = room.roles || {}, h = room.hunter || {}, r = room.round;
+  const pick = room.hunterShot && players[room.hunterShot] && players[room.hunterShot].alive && room.hunterShot !== h.id ? room.hunterShot : null;
+  const hn = players[h.id] ? players[h.id].name : 'Thợ săn', u = { hunter: null, hunterShot: null };
+  let note;
+  if (pick) { u['players/' + pick + '/alive'] = false; u['dead/' + pick] = true; note = `Thợ săn ${hn} bắn ${players[pick].name} chết${room.hideRoles ? '' : ` (${ROLE_NAME[roles[pick]]})`}.`; }
+  else note = `Thợ săn ${hn} không bắn ai.`;
+  u['log/' + lk(r, h.src === 'night' ? 2 : 4)] = note;
+  const win = winnerOf(players, roles, pick ? [pick] : []);
+  if (win) { u.phase = 'end'; u.winner = win; u.announce = note; u.deadline = null; u.endedAt = now; u['log/999'] = '🏁 ' + win; }
+  else if (h.src === 'night') { u.phase = 'day'; u.announce = note; u.deadline = now + durOf(room, 'day') * 1000; }
+  else { u.phase = 'night'; u.round = r + 1; u.announce = note + `\nĐêm ${r + 1} bắt đầu…`; u.deadline = now + DUR.night * 1000; }
   return { u, g: win ? gameRecord(room, win, now) : null };
 }
 
@@ -219,6 +258,11 @@ const hpick = (arr, seed) => arr[Math.floor(hash(seed) * arr.length)];
 export function planBots(room, now) {
   if (!room || !room.players || !room.roles || !room.deadline || !DUR[room.phase]) return null;
   const al = aliveIds(room), roles = room.roles, r = room.round, ph = room.phase;
+  if (ph === 'hunter') {   // Thợ săn máy (đã chết) chọn người bắn sau một lúc
+    const h = room.hunter || {}, hp = room.players[h.id], elh = now - (room.deadline - DUR.hunter * 1000);
+    if (hp && hp.bot && !room.hunterShot && elh >= 2000 + hash(h.id + 'h' + r) * 8000) { const c = al.filter(id => id !== h.id); if (c.length) return { u: { hunterShot: hpick(c, h.id + 'hs' + r) } }; }
+    return null;
+  }
   const bots = al.filter(id => room.players[id].bot); if (!bots.length) return null;
   const el = now - (room.deadline - durOf(room, ph) * 1000), mem = room.botMem || {}, u = {};
   if (ph === 'night') {
@@ -230,6 +274,9 @@ export function planBots(room, now) {
       } else if (roles[b] === 'seer' && !n.seer) {
         const checked = (mem[b] || {}).checked || {}, others = al.filter(id => id !== b), fresh = others.filter(id => !checked[id]);
         const t = hpick(fresh.length ? fresh : others, b + 'seer' + r); if (t) { u['night/seer'] = t; u['botMem/' + b + '/checked/' + t] = roles[t] === 'wolf' ? 'wolf' : 'ok'; }
+      } else if (roles[b] === 'witch' && !n.witch && n.target) {   // Phù thủy máy: cứu người bị cắn (thường là vậy), không dùng thuốc độc
+        const used = room.witchUsed || {}, tg = n.target === 'none' ? null : n.target;
+        u['night/witch'] = { save: !!(tg && !used.heal && hash(b + 'ws' + r) < 0.85), poison: null };
       } else if (roles[b] === 'guard' && !n.guard) {
         const last = (mem[b] || {}).last, c = al.filter(id => id !== last), t = hpick(c.length ? c : al, b + 'guard' + r);
         if (t) { u['night/guard'] = t; u['botMem/' + b + '/last'] = t; }
