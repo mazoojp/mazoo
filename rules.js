@@ -125,25 +125,26 @@ function nightPlan(room, now) {
   const seerId = al.find(id => roles[id] === 'seer');
   const u = { night: null, votes: null, ready: null };
   if (seerId && n.seer && players[n.seer]) u['seerLog/' + r] = `Đêm ${r}: ${players[n.seer].name} ${roles[n.seer] === 'wolf' ? 'LÀ SÓI' : 'không phải Sói'}.`;
-  let dead = null, announce;
-  if (!target || saved) announce = 'Đêm qua yên bình, không ai chết.';
-  else { dead = target; u['players/' + dead + '/alive'] = false; announce = `Đêm qua ${players[dead].name} đã bị Sói cắn chết.`; }
+  let dead = null, announce, note;   // announce: thông báo đầu trang; note: dòng ngắn trong nhật ký diễn biến
+  if (!target || saved) { announce = 'Đêm qua yên bình, không ai chết.'; note = 'Không ai chết.'; }
+  else { dead = target; u['players/' + dead + '/alive'] = false; announce = `Đêm qua ${players[dead].name} đã bị Sói cắn chết.`; note = `${players[dead].name} bị Sói cắn chết.`; }
   const win = winnerOf(players, roles, dead);
   if (win) { u.phase = 'end'; u.winner = win; u.deadline = null; } else { u.phase = 'day'; u.deadline = now + DUR.day * 1000; }
-  u.announce = announce; u['log/' + logKey(2 * r - 1)] = announce;
-  if (win) u.endedAt = now;
+  u.announce = announce; u['log/' + logKey(2 * r - 1)] = note;
+  if (win) { u.endedAt = now; u['log/999'] = '🏁 ' + win; }
   return { u };
 }
 function votePlan(room, now) {
   const players = room.players, roles = room.roles || {}, r = room.round, al = aliveIds(room);
   const v = {}; Object.entries(room.votes || {}).forEach(([id, t]) => { if (al.includes(id) && players[t] && players[t].alive) v[id] = t; });
   const t = tally(v), u = { night: null, votes: null, ready: null };
-  let dead = null, announce;
+  let dead = null, announce, note;
   if (t.top.length === 1 && t.max > 0) { dead = t.top[0]; u['players/' + dead + '/alive'] = false; announce = `Làng treo cổ ${players[dead].name}${room.hideRoles ? '.' : ` (${ROLE_NAME[roles[dead]]}).`}`;   /* hideRoles: chế độ không lộ vai khi chết */ }
   else announce = 'Phiếu hòa hoặc không ai bỏ phiếu, hôm nay không ai bị treo cổ.';
+  note = dead ? announce : 'Hòa phiếu, không ai bị treo cổ.';
   const win = winnerOf(players, roles, dead);
-  u['log/' + logKey(2 * r)] = announce;
-  if (win) { u.phase = 'end'; u.winner = win; u.announce = announce; u.deadline = null; u.endedAt = now; }
+  u['log/' + logKey(2 * r)] = note;
+  if (win) { u.phase = 'end'; u.winner = win; u.announce = announce; u.deadline = null; u.endedAt = now; u['log/999'] = '🏁 ' + win; }
   else { u.phase = 'night'; u.round = r + 1; u.announce = announce + `\nĐêm ${r + 1} bắt đầu…`; u.deadline = now + DUR.night * 1000; }
   return { u };
 }

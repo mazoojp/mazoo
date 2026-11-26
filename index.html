@@ -141,6 +141,8 @@
   .msg .chn{font-weight:700;font-size:12px;padding:1px 7px;border-radius:999px;margin-right:2px} .chn.day{background:#E8F1FD;color:#1371E2} .chn.wolf{background:#FDECEC;color:#DC2626} .chn.dead{background:#EEF0F3;color:#6B7280} .msg b{color:var(--pri)} .msg.wolfmsg b{color:var(--red)} .msg.deadmsg b{color:var(--faint)}
   .chat.sm{height:280px;position:static;margin-bottom:12px} .chat.day{border-top:4px solid var(--pri)} .chat.wolf{border-top:4px solid #DC2626;background:#fffafa} .chat.dead{border-top:4px solid #6B7280}
   .chat .open{font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;margin-left:8px;background:#E7F7EE;color:#12803A} .chat .closed{background:#EEF0F3;color:#6B7280}
+  .msg.bub{display:flex;flex-direction:column;align-items:flex-start;margin:7px 0} .msg.bub .who{font-size:11px;color:var(--mute);margin:0 6px 2px} .msg.bub .tx{background:#fff;border:1px solid #e5e7eb;border-radius:14px 14px 14px 4px;padding:6px 11px;max-width:85%;overflow-wrap:anywhere}
+  .msg.bub.mine{align-items:flex-end} .msg.bub.mine .tx{background:var(--pri);border-color:var(--pri);color:#fff;border-radius:14px 14px 4px 14px} .chat.wolf .msg.bub.mine .tx{background:#DC2626;border-color:#DC2626}
   .chatrow{display:flex;gap:8px} .chatrow input{height:42px}
   .chatrow button{min-width:64px}
 
@@ -187,7 +189,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126c';
+import { ROLE_NAME, MIN, MAX, DUR, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126e';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -713,9 +715,9 @@ function wolfMatesHTML() {
   const mates = Object.keys(roles).filter(id => roles[id] === 'wolf' && id !== me.pid && p[id]);
   return `<div class="card" style="border-left:4px solid #DC2626;padding:10px 16px">🐺 <b>Đồng bọn Sói của bạn:</b> ${mates.length ? mates.map(id => esc(p[id].name) + (p[id].alive ? '' : ' (đã chết)')).join(', ') : 'không có (bạn là Sói duy nhất)'}</div>`;
 }
-function recapHTML() {   // diễn biến ván (hiện khi kết thúc)
+function recapHTML() {   // diễn biến ván (cập nhật suốt ván)
   const L = S.log || {}, ks = Object.keys(L).sort();
-  return ks.length ? `<div class="card"><div class="sec">📜 Diễn biến ván</div>${ks.map(k => `<div class="note" style="margin:4px 0"><b>${k % 2 ? '🌙 Đêm ' + (Math.floor(k / 2) + 1) : '☀️ Ngày ' + (k / 2)}:</b> ${esc(L[k]).replace(/\n/g, ' ')}</div>`).join('')}</div>` : '';
+  return ks.length ? `<div class="card"><div class="sec">📜 Diễn biến ván</div>${ks.map(k => `<div class="note" style="margin:4px 0">${k === '999' ? '' : `<b>${k % 2 ? '🌙 Đêm ' + (Math.floor(k / 2) + 1) : '☀️ Ngày ' + (k / 2)}:</b> `}${k === '999' ? `<b>${esc(L[k])}</b>` : esc(L[k]).replace(/\n/g, ' ')}</div>`).join('')}</div>` : '';
 }
 function gameHTML() {
   const p = S.players || {}, roles = S.roles || {}, myRole = roles[me.pid], iAlive = p[me.pid] && p[me.pid].alive;
@@ -796,12 +798,13 @@ function chatSees(ch) {   // kênh nào mình được đọc
 const chatMsgs = ch => Object.entries(S.chat || {}).filter(([, m]) => m.c === ch).sort((a, b) => a[0] < b[0] ? -1 : 1).slice(-60);
 // Trong ván, mỗi kênh là MỘT KHUNG RIÊNG, ô nhập riêng, không bao giờ nhầm đêm/ngày:
 //   Chat làng (ban ngày) · Chat Sói (ban đêm, chỉ Sói thấy) · Chat người chết
+const msgBub = (m, chip) => `<div class="msg bub ${m.pid === me.pid ? 'mine' : ''}"><div class="who">${chip ? `<span class="chn ${m.c}">${CH_NAME[m.c] || 'Chung'}</span> ` : ''}${m.pid === me.pid ? '' : esc(m.name)}</div><div class="tx">${esc(m.text)}</div></div>`;   // tin của mình ở bên phải, của người khác bên trái
 function chatBox(ch) {
   const why = chatRule(ch), draft = chatDrafts[ch] || '';
   const T = { day: ['💬 Chat làng', 'ban ngày'], wolf: ['🐺 Chat Sói', 'ban đêm · chỉ Sói thấy'], dead: ['💀 Chat người chết', 'chỉ người chết thấy'] }[ch];
   const msgs = chatMsgs(ch);
   return `<div class="card chat sm ${ch}"><div class="sec">${T[0]}<span class="note" style="margin-left:6px;font-weight:400">${T[1]}</span><span class="open ${why ? 'closed' : ''}">${why ? 'đang đóng' : 'đang mở'}</span></div>
-  <div class="chatlist" id="chatlist-${ch}">${msgs.length ? msgs.map(([, m]) => `<div class="msg"><b>${esc(m.name)}:</b> ${esc(m.text)}</div>`).join('') : '<div class="note">Chưa có tin nhắn.</div>'}</div>
+  <div class="chatlist" id="chatlist-${ch}">${msgs.length ? msgs.map(([, m]) => msgBub(m, false)).join('') : '<div class="note">Chưa có tin nhắn.</div>'}</div>
   ${why ? `<div class="note" style="margin-bottom:8px">${esc(why)}</div>` : ''}
   <div class="chatrow"><input data-bind="chat" data-ch="${ch}" maxlength="200" placeholder="${why ? 'Không thể gửi lúc này' : 'Nhập tin nhắn…'}" value="${esc(draft)}" ${why ? 'disabled' : ''} autocomplete="off">
   <button class="primary" data-act="send" data-ch="${ch}" ${why ? 'disabled' : ''}>Gửi</button></div></div>`;
@@ -818,7 +821,7 @@ function chatHTML() {   // phòng chờ, khán đài và lúc hết ván: một 
   const msgs = Object.entries(S.chat || {}).filter(([, m]) => chatSees(m.c)).sort((a, b) => a[0] < b[0] ? -1 : 1).slice(-80);
   const why = chatRule(chatTab);
   return `<div class="card chat"><div class="sec">💬 Chat</div>
-  <div class="chatlist" id="chatlist-merged">${msgs.length ? msgs.map(([, m]) => `<div class="msg ${m.c}msg"><span class="chn ${m.c}">${CH_NAME[m.c] || 'Chung'}:</span> <b>${esc(m.name)}:</b> ${esc(m.text)}</div>`).join('') : '<div class="note">Chưa có tin nhắn.</div>'}</div>
+  <div class="chatlist" id="chatlist-merged">${msgs.length ? msgs.map(([, m]) => msgBub(m, true)).join('') : '<div class="note">Chưa có tin nhắn.</div>'}</div>
   ${tabs.length > 1 ? `<div class="tabs"><span class="note" style="align-self:center">Gửi tới:</span>${tabs.map(t => `<button class="${chatTab === t[0] ? 'sel' : ''}" data-act="chatTab" data-ch="${t[0]}">${t[1]}</button>`).join('')}</div>` : ''}
   ${why ? `<div class="note" style="margin-bottom:8px">${esc(why)}</div>` : ''}
   <div class="chatrow"><input data-bind="chat" data-ch="${chatTab}" maxlength="200" placeholder="${why ? 'Không thể gửi lúc này' : 'Nhập tin nhắn…'}" value="${esc(chatDrafts[chatTab] || '')}" ${why ? 'disabled' : ''} autocomplete="off">
