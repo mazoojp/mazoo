@@ -204,7 +204,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126bb';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126bc';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -362,6 +362,7 @@ function enter(m) {
   unwatch = B.watch('rooms/' + me.code, v => {
     S = v;
     if (!S) { leaveLocal(); render(); return; }
+    if (S.hunter) S.phase = 'hunter';   // bước Thợ săn bắn: trong dữ liệu phase lưu là 'vote' (để trang cũ không lỗi), trang mới hiểu là 'hunter'
     if (me && S.kicked && S.kicked[me.pid] && !(S.players || {})[me.pid] && !me.spec) { leaveLocal(); homeErr = 'Bạn đã bị chủ phòng mời ra khỏi phòng.'; render(); return; }
     if (me && !me.spec && S.spectators && S.spectators[me.pid] && !(S.players || {})[me.pid]) { me = { pid: me.pid, name: me.name, code: me.code, spec: true, why: 'self' }; store().setItem('masoi_me', JSON.stringify(me)); }   // luật đã chuyển mình xuống khán đài
     else if (me && me.spec && (S.players || {})[me.pid]) { me = { pid: me.pid, name: me.name, code: me.code }; store().setItem('masoi_me', JSON.stringify(me)); beatSent = false; }   // lên chơi
@@ -1699,8 +1700,8 @@ function roomListItems() {
     if (!onlineH) continue;   // không còn ai online thì không hiện
     const host = r.players[r.host] ? r.players[r.host].name : '';
     if (rlKind === 'rooms') {
-      const n = pl.length, alive = pl.filter(([, p]) => p.alive).length, rdy = pl.filter(([, p]) => p.ready).length, ph = r.phase;
-      const st = ph === 'lobby' ? `⏳ Đang chờ · ${n}/${MAX} người · ${rdy} sẵn sàng` : ph === 'night' ? `🌙 Đang chơi · Đêm thứ ${r.round} · ${alive}/${n} còn sống` : ph === 'day' ? `☀️ Đang chơi · ${r.round === 0 ? 'Mở đầu ván (làm quen)' : 'Ngày thứ ' + r.round + ' (thảo luận)'} · ${alive}/${n} còn sống` : ph === 'vote' ? `🗳️ Đang chơi · Bỏ phiếu ngày ${r.round} · ${alive}/${n} còn sống` : ph === 'hunter' ? `🏹 Đang chơi · Thợ săn đang bắn · ${alive}/${n} còn sống` : `🏁 Vừa kết thúc · ${n} người`;
+      const n = pl.length, alive = pl.filter(([, p]) => p.alive).length, rdy = pl.filter(([, p]) => p.ready).length, ph = r.hunter ? 'hunter' : r.phase;
+      const st = ph === 'lobby' ? `⏳ Đang chờ · ${n}/${MAX} người · ${rdy} sẵn sàng` : ph === 'night' ? `🌙 Đang chơi · Đêm thứ ${r.round} · ${alive}/${n} còn sống` : ph === 'day' ? `☀️ Đang chơi · ${r.round === 0 ? 'Mở đầu ván (làm quen)' : 'Ngày thứ ' + r.round + ' (thảo luận)'} · ${alive}/${n} còn sống` : ph === 'vote' ? `🗳️ Đang chơi · Bỏ phiếu ngày ${r.round} · ${alive}/${n} còn sống` : (r.hunter || ph === 'hunter') ? `🏹 Đang chơi · Thợ săn đang bắn · ${alive}/${n} còn sống` : `🏁 Vừa kết thúc · ${n} người`;
       const can = ph === 'lobby' && n < MAX ? 'Vào' : r.allowSpec === false ? '' : 'Xem';
       out.push({ code, st, host, spec, can, ord: r.createdAt || 0 });
     } else {
@@ -1725,7 +1726,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261126bb';
+const APP_V = '20261126bc';
 const UPD_NOTE = '<div id="updnote" class="updnote">🔔 Có bản cập nhật mới. Bấm F5 (hoặc Ctrl + Shift + R) để tải lại trang nhé.</div>';
 async function checkNewVersion() {
   try {

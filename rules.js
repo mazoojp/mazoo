@@ -142,6 +142,7 @@ export function planStep(room, now) {
   }
 
   const expired = room.deadline && now >= room.deadline;
+  if (room.hunter) return room.hunterShot || expired ? hunterPlan(room, now) : null;   // đang chờ Thợ săn bắn (phase lưu là 'vote'), không xét phiếu
   if (room.phase === 'night') {
     const roles = room.roles || {}, n = room.night || {}, wv = n.wolf || {}, al = aliveIds(room);
     const wolves = al.filter(id => roles[id] === 'wolf');
@@ -159,8 +160,6 @@ export function planStep(room, now) {
   } else if (room.phase === 'vote') {
     const al = aliveIds(room), v = room.votes || {};
     if ((al.length && al.every(id => v[id])) || expired) return votePlan(room, now);
-  } else if (room.phase === 'hunter') {
-    if (room.hunterShot || expired) return hunterPlan(room, now);
   }
   return null;
 }
@@ -224,7 +223,8 @@ function nightPlan(room, now) {
   u['log/' + lk(r, 1)] = note; u.announce = announce;
   const hunterId = deaths.find(id => roles[id] === 'hunter' && id !== poisonT);   // Thợ săn bị đầu độc thì không bắn được
   if (hunterId) {   // chờ Thợ săn chọn người bắn rồi mới xét thắng thua và sang ngày
-    u.phase = 'hunter'; u.hunter = { id: hunterId, src: 'night' }; u.hunterShot = null; u.deadline = now + DUR.hunter * 1000;
+    u.phase = 'vote'; u.hunter = { id: hunterId, src: 'night' };   // phase lưu là 'vote' để trang cũ (chưa biết bước Thợ săn) không bị lỗi; trang mới nhận ra bước này nhờ room.hunter
+    u.votes = null; u.hunterShot = null; u.deadline = now + DUR.hunter * 1000;
     u.announce = announce + `\nThợ săn ${nm(hunterId)} bị loại và được bắn một người trước khi gục.`;
     return { u, g: null };
   }
@@ -242,7 +242,8 @@ function votePlan(room, now) {
   note = dead ? announce : 'Hòa phiếu, không ai bị treo cổ.';
   u['log/' + lk(r, 3)] = note;
   if (dead && roles[dead] === 'hunter') {   // Thợ săn bị treo cổ: được bắn một người trước khi gục
-    u.phase = 'hunter'; u.hunter = { id: dead, src: 'vote' }; u.hunterShot = null; u.deadline = now + DUR.hunter * 1000;
+    u.phase = 'vote'; u.hunter = { id: dead, src: 'vote' };   // xem chú thích ở trên
+    u.votes = null; u.hunterShot = null; u.deadline = now + DUR.hunter * 1000;
     u.announce = announce + `\nThợ săn ${players[dead].name} được bắn một người trước khi gục.`;
     return { u, g: null };
   }
@@ -254,7 +255,7 @@ function votePlan(room, now) {
 function hunterPlan(room, now) {   // Thợ săn đã chọn người bắn (hoặc hết giờ): bắn xong mới xét thắng thua rồi sang bước kế tiếp
   const players = room.players, roles = room.roles || {}, h = room.hunter || {}, r = room.round;
   const pick = room.hunterShot && players[room.hunterShot] && players[room.hunterShot].alive && room.hunterShot !== h.id ? room.hunterShot : null;
-  const hn = players[h.id] ? players[h.id].name : 'Thợ săn', u = { hunter: null, hunterShot: null };
+  const hn = players[h.id] ? players[h.id].name : 'Thợ săn', u = { hunter: null, hunterShot: null, votes: null, ready: null };
   let note;
   if (pick) { u['players/' + pick + '/alive'] = false; u['dead/' + pick] = true; note = `Thợ săn ${hn} bắn ${players[pick].name} chết${room.hideRoles ? '' : ` (${ROLE_NAME[roles[pick]]})`}.`; }
   else note = `Thợ săn ${hn} không bắn ai.`;
@@ -276,7 +277,7 @@ const hpick = (arr, seed) => arr[Math.floor(hash(seed) * arr.length)];
 export function planBots(room, now) {
   if (!room || !room.players || !room.roles || !room.deadline || !DUR[room.phase]) return null;
   const al = aliveIds(room), roles = room.roles, r = room.round, ph = room.phase;
-  if (ph === 'hunter') {   // Thợ săn máy (đã chết) chọn người bắn sau một lúc
+  if (room.hunter) {   // Thợ săn máy (đã chết) chọn người bắn sau một lúc
     const h = room.hunter || {}, hp = room.players[h.id], elh = now - (room.deadline - DUR.hunter * 1000);
     if (hp && hp.bot && !room.hunterShot && elh >= 2000 + hash(h.id + 'h' + r) * 8000) { const c = al.filter(id => id !== h.id); if (c.length) return { u: { hunterShot: hpick(c, h.id + 'hs' + r) } }; }
     return null;
