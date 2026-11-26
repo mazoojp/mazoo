@@ -198,7 +198,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126ak';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126al';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -764,7 +764,7 @@ function gameHTML() {
   const alive = Object.keys(p).filter(id => p[id].alive);
   const PH = { hunter: ['🏹 Thợ săn bắn', 'red'], night: ['🌙 Ban đêm', 'mute'], day: ['☀️ Ban ngày', 'amber'], vote: ['🗳️ Bỏ phiếu', 'red'], end: ['🏁 Kết thúc', 'green'] }[S.phase];
   let out = `<div class="status"><span class="chip ${PH[1]}">${PH[0]}</span><span class="chip mute">${S.round === 0 ? 'Mở đầu ván' : 'Đêm thứ ' + S.round}</span><span class="chip" id="cd"></span><span class="chip mute">${alive.length}/${Object.keys(p).length} còn sống</span>${S.hideRoles ? '<span class="chip mute">🎭 Ẩn vai khi chết</span>' : ''}${Object.keys(S.spectators || {}).length ? `<span class="chip mute">👀 ${Object.keys(S.spectators).length} khán giả</span>` : ''}</div>`;
-  out += rolesSummary() + todoHTML() + recapHTML();   // dòng "ván này có" cố định trên cùng; diễn biến (khi đã có) nằm trên thẻ vai và cập nhật ngay trong lúc chơi
+  out += rolesSummary() + todoHTML() + '\u0001ACT\u0001' + recapHTML();   // \u0001ACT\u0001: chỗ để phần chọn hành động (cắn/soi/bảo vệ/bỏ phiếu/bắn) được đôn lên ngay dưới hướng dẫn cho dễ bấm   // dòng "ván này có" cố định trên cùng; diễn biến (khi đã có) nằm trên thẻ vai và cập nhật ngay trong lúc chơi
   const roleCard = !myRole ? '' : `<div class="card role ${showRole && myRole ? myRole : ''} ${!roleSeen && myRole ? 'pulse' : ''}" data-act="toggleRole">${showRole && myRole
     ? `<div class="note">Vai của bạn</div><div class="big t-${myRole}">${ROLE_NAME[myRole]}</div><div class="note">${ROLE_HINT[myRole]}</div><div class="note" style="margin-top:6px">(bấm để ẩn)</div>`
     : `<div class="note">${roleSeen ? 'Bấm để xem lại vai (đừng cho người khác thấy)' : '👆 Bấm vào đây để xem vai của bạn (đừng cho người khác thấy)'}</div><div class="big">🎴</div>`}</div>`;
@@ -773,6 +773,7 @@ function gameHTML() {
   if (S.announce) out += `<div class="card ann">${esc(S.announce).replace(/\n/g, '<br>')}</div>`;
   if (myRole === 'seer' && S.seerLog) out += `<div class="card"><div class="sec">🔮 Kết quả soi</div>${Object.keys(S.seerLog).sort((a, b) => a - b).map(k => `<div>${esc(S.seerLog[k])}</div>`).join('')}</div>`;
 
+  const actMark = out.length;
   if (S.phase === 'night') {
     const n = S.night || {}, wv = n.wolf || {};
     if (!iAlive) out += '<div class="card note">Bạn đã chết. Hãy xem tiếp trong im lặng.</div>';
@@ -800,6 +801,7 @@ function gameHTML() {
   } else if (S.phase === 'end') {
     out += `<div class="card ann"><b>${esc(S.winner || '')}</b><div class="row" style="justify-content:center;margin-top:12px"><button class="primary" id="againbtn" data-act="again" style="min-width:180px">Chơi ván mới</button><button data-act="toSpec">👀 Xuống khán đài</button><button class="ghost" data-act="leave">Thoát khỏi phòng</button></div></div>`;
   }
+  if (['night', 'vote', 'hunter'].includes(S.phase)) { const blk = out.slice(actMark); out = out.slice(0, actMark).replace('\u0001ACT\u0001', blk); } else out = out.replace('\u0001ACT\u0001', '');   // phần chọn hành động nằm trên cùng
   out += `<div class="card"><div class="sec">Người chơi</div>${playersGrid(S.phase === 'end', false)}</div>`;
   if (S.log) out += roleCard;
   return `<div class="cols"><div class="stack">${out}</div><div class="stack">${chatHTML()}${S.host === me.pid ? specBtn() : ''}${S.phase === 'end' ? '' : '<button class="ghost" data-act="leave">Thoát khỏi phòng</button>'}</div></div>`;
@@ -1680,7 +1682,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261126ak';
+const APP_V = '20261126al';
 async function checkNewVersion() {
   try {
     const t = await (await fetch(location.pathname + '?_v=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/const APP_V = '([^']+)'/);

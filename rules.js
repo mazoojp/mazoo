@@ -4,7 +4,7 @@
 // "Backend" B là đối tượng có: get(path), set(path, value), update({path: value}), watch(path, cb).
 
 export const ROLE_NAME = { wolf: 'Sói', seer: 'Tiên tri', guard: 'Bảo vệ', witch: 'Phù thủy', hunter: 'Thợ săn', chief: 'Trưởng làng', vill: 'Dân làng' };
-export const DUR = { night: 20, day: 120, vote: 60, hunter: 20 };   // giây (mặc định)
+export const DUR = { night: 30, day: 120, vote: 60, hunter: 20 };   // giây (mặc định)
 export const DAY_OPTIONS = [60, 120, 180, 300, 600];   // thời gian thảo luận ban ngày mà chủ phòng được chọn (giây), lưu ở room.dayTime
 export const durOf = (room, ph) => ph === 'day' && DAY_OPTIONS.includes(room && room.dayTime) ? room.dayTime : DUR[ph];
 export const MIN = 4, MAX = 20;
