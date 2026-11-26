@@ -143,6 +143,7 @@
   .chat .open{font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;margin-left:8px;background:#E7F7EE;color:#12803A} .chat .closed{background:#EEF0F3;color:#6B7280}
   .msg.bub{display:flex;flex-direction:column;align-items:flex-start;margin:7px 0} .msg.bub .who{font-size:11px;color:var(--mute);margin:0 6px 2px} .msg.bub .tx{background:#fff;border:1px solid #e5e7eb;border-radius:14px 14px 14px 4px;padding:6px 11px;max-width:85%;overflow-wrap:anywhere}
   .msg.bub.mine{align-items:flex-end} .msg.bub.mine .tx{background:var(--pri);border-color:var(--pri);color:#fff;border-radius:14px 14px 4px 14px} .chat.wolf .msg.bub.mine .tx{background:#DC2626;border-color:#DC2626}
+  .rrow{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid #eceef2;border-radius:12px;margin-top:8px;flex-wrap:wrap} .rrow .rc{font-weight:800;font-size:18px;min-width:56px;color:var(--pri-text)} .rrow .ri{flex:1;min-width:160px;font-size:14px} .rrow .ri .note{font-size:12px}
   .chatrow{display:flex;gap:8px} .chatrow input{height:42px}
   .chatrow button{min-width:64px}
 
@@ -189,7 +190,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126j';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126k';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -211,6 +212,7 @@ function localBackend() {
   window.addEventListener('storage', e => { if (e.key === KEY) { data = JSON.parse(e.newValue || '{}'); notify(); } });
   return {
     mode: 'local',
+    onDisc: () => {},
     get: async p => clone(getp(p)),
     set: async (p, v) => { setp(p, v); save(); notify(); },
     update: async u => { for (const [p, v] of Object.entries(u)) setp(p, v); save(); notify(); },
@@ -234,6 +236,7 @@ async function makeBackend() {
       set: (p, v) => m.set(m.ref(db, p), v),
       update: u => m.update(m.ref(db), u),
       watch: (p, cb) => m.onValue(m.ref(db, p), s => cb(s.val())),
+      onDisc: p => m.onDisconnect(m.ref(db, p)).remove(),   // máy ngắt kết nối thì máy chủ tự xoá nút này
       watchLast: (p, n, cb) => m.onValue(m.query(m.ref(db, p), m.orderByKey(), m.limitToLast(n)), s => cb(s.val())),
       pruneOld: async (p, cutoff) => {   // xoá tối đa 30 tin cũ nhất đã quá hạn (luật chỉ cho xoá tin quá hạn)
         const s = await m.get(m.query(m.ref(db, p), m.orderByKey(), m.limitToFirst(30))), v = s.val() || {}, u = {};
@@ -490,6 +493,7 @@ function shell(inner) {
       <header class="topbar">
         ${logo}<span class="greet">${cx ? 'Chào ' + esc(cx.name) + '!' : 'Chào bạn!'}</span>
         <span class="spacer"></span>
+        ${B.mode === 'firebase' ? `<span class="chip green" title="Số người đang mở trang web">🟢 <span class="onlinecnt">${onlineN}</span> online</span>` : ''}
         ${inRoom ? `<span class="chip">Phòng ${esc(cx.code)}</span>` : ''}
         ${inRoom ? '<button class="primary tb hide" data-act="invite">Mời bạn bè</button>' : ''}
         <button class="tb" data-act="help" style="background:var(--pri-soft);color:var(--pri)">Cách chơi</button>
@@ -567,6 +571,7 @@ function homeHTML() {
         <button class="vm" data-act="help">Xem luật ›</button></div>
       ${homeErr ? `<div class="err">${esc(homeErr)}</div>` : '<div class="note" style="margin-top:6px">Phòng đã có thì bạn vào chơi cùng. Chưa có thì phòng mới được tạo với số này.</div>'}
     </div>
+    ${roomsCardHTML()}
     <div class="row2">
       <div class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><div class="sec" style="margin:0">Ma sói là gì?</div><button class="vm" data-act="help" style="margin:0">Xem thêm</button></div>
         <p style="font-size:14px">Trò chơi suy luận nhóm. Trong làng có vài <b>Sói</b> giả làm dân thường. Ban đêm Sói lén cắn chết một người, ban ngày cả làng thảo luận rồi bỏ phiếu treo cổ người bị nghi là Sói.</p>
@@ -755,10 +760,10 @@ function gameHTML() {
     else out += v[me.pid] ? `<div class="card">Bạn đã bỏ phiếu cho <b>${esc(p[v[me.pid]].name)}</b>.</div>` : picker(alive.filter(id => id !== me.pid), 'vote', 'Bỏ phiếu treo cổ');
     out += `<p class="note" style="text-align:center">Đã bỏ phiếu: ${cnt}/${alive.length}</p>`;
   } else if (S.phase === 'end') {
-    out += `<div class="card ann"><b>${esc(S.winner || '')}</b><div class="row" style="justify-content:center;margin-top:12px"><button class="primary" id="againbtn" data-act="again" style="min-width:180px">Chơi ván mới</button></div></div>`;
+    out += `<div class="card ann"><b>${esc(S.winner || '')}</b><div class="row" style="justify-content:center;margin-top:12px"><button class="primary" id="againbtn" data-act="again" style="min-width:180px">Chơi ván mới</button><button class="ghost" data-act="leave">Thoát khỏi phòng</button></div></div>`;
   }
   out += `<div class="card"><div class="sec">Người chơi</div>${playersGrid(S.phase === 'end', false)}</div>`;
-  return `<div class="cols"><div class="stack">${out}</div><div class="stack">${chatHTML()}${S.host === me.pid ? specBtn() : ''}<button class="ghost" data-act="leave">Thoát khỏi phòng</button></div></div>`;
+  return `<div class="cols"><div class="stack">${out}</div><div class="stack">${chatHTML()}${S.host === me.pid ? specBtn() : ''}${S.phase === 'end' ? '' : '<button class="ghost" data-act="leave">Thoát khỏi phòng</button>'}</div></div>`;
 }
 
 /* ============ Chat ============ */
@@ -1410,6 +1415,7 @@ function caroHomeHTML() {
       ${homeErr ? `<div class="err">${esc(homeErr)}</div>` : '<div class="note" style="margin-top:6px">Phòng đã có thì bạn vào chơi cùng, chưa có thì phòng mới được tạo. Người thứ hai vào là ván bắt đầu.</div>'}
     </div>`;
   return `<div class="stack">${top}
+    ${roomsCardHTML()}
     <div class="cols">
       <div class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><div class="sec" style="margin:0">🏆 Bảng xếp hạng</div><button class="vm" data-act="rank" style="margin:0">Xem tất cả</button></div>${rankTable(10)}</div>
       <div class="stack">
@@ -1515,6 +1521,7 @@ document.addEventListener('click', e => {
   if (a === 'join') { game === 'caro' ? caroJoin() : joinOrCreate(); } else if (a === 'leave') { game === 'caro' ? caroLeave() : leave(); }
   else if (a === 'home') { if (game === 'ngu') { nguSave(); (async () => { if (NCm) await ncLeave(); game = 'masoi'; render(); })(); } else if (game === 'gchat') { gcStop(); game = 'masoi'; render(); } else if (game === 'donate' || game === 'menu') { game = 'masoi'; render(); } else if (game === 'caro') { if (cme) caroLeave(); } else if (me) leave(); }
   else if (a === 'cycleDay') { if (S && S.host === me.pid && S.phase === 'lobby') B.set(base() + 'dayTime', DAY_OPTIONS[(DAY_OPTIONS.indexOf(durOf(S, 'day')) + 1) % DAY_OPTIONS.length]); }
+  else if (a === 'pickRoom') { homeCode = el.dataset.code; render(); const i = document.querySelector((homeName || game === 'caro') ? '[data-bind=code]' : '[data-bind=name]'); if (i) i.focus(); }
   else if (a === 'toggleHide') { if (S && S.host === me.pid && S.phase === 'lobby') B.set(base() + 'hideRoles', !S.hideRoles); }
   else if (a === 'toggleSpec') { if (S && S.host === me.pid) B.set(base() + 'allowSpec', !specOn()); }
   else if (a === 'side') { sideOpen = !sideOpen; render(); }
@@ -1536,8 +1543,58 @@ document.addEventListener('click', e => {
   else if (a === 'chatTab') { chatTab = el.dataset.ch; render(); }
 });
 
+/* ============ Số người online + danh sách phòng đang mở ============ */
+// Online: mỗi trang đang mở ghi meta/online/<mã> (giờ máy chủ) mỗi 25 giây và tự bị xoá khi ngắt kết nối; đếm các nút còn mới (< 80 giây).
+let onlineN = 0;
+const updateOnline = () => document.querySelectorAll('.onlinecnt').forEach(e => { e.textContent = onlineN; });
+function presenceStart() {
+  const path = 'meta/online/' + rid() + rid();
+  B.onDisc(path);
+  const ping = () => B.set(path, tnow()).catch(() => {});
+  ping(); setInterval(ping, 25000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) ping(); });
+  B.watch('meta/online', v => { const t = tnow(); onlineN = Object.values(v || {}).filter(x => typeof x === 'number' && t - x < 80000).length; updateOnline(); });
+}
+// Danh sách phòng: chỉ theo dõi khi đang ở trang chủ Ma sói / Cờ caro; chỉ vẽ lại khung danh sách (không vẽ lại cả trang để không mất ô đang gõ)
+let rlKind = '', rlRaw = null, rlUnwatch = null, rlSig = '';
+const homeKind = () => B.mode !== 'firebase' ? '' : game === 'masoi' && !me ? 'rooms' : game === 'caro' && !cme ? 'caro' : '';
+function roomListItems() {
+  const t = tnow(), out = [];
+  for (const [code, r] of Object.entries(rlRaw || {})) {
+    if (!r || !r.players) continue;
+    const pl = Object.entries(r.players), seen = r.seen || {}, spec = Object.keys(r.spectators || {}).length;
+    const onlineH = pl.filter(([id, p]) => !p.bot && seen[id] && t - seen[id] < ONLINE_MS + 15000).length;
+    if (!onlineH) continue;   // không còn ai online thì không hiện
+    const host = r.players[r.host] ? r.players[r.host].name : '';
+    if (rlKind === 'rooms') {
+      const n = pl.length, alive = pl.filter(([, p]) => p.alive).length, rdy = pl.filter(([, p]) => p.ready).length, ph = r.phase;
+      const st = ph === 'lobby' ? `⏳ Đang chờ · ${n}/${MAX} người · ${rdy} sẵn sàng` : ph === 'night' ? `🌙 Đang chơi · Đêm thứ ${r.round} · ${alive}/${n} còn sống` : ph === 'day' ? `☀️ Đang chơi · Ngày thứ ${r.round} (thảo luận) · ${alive}/${n} còn sống` : ph === 'vote' ? `🗳️ Đang chơi · Bỏ phiếu ngày ${r.round} · ${alive}/${n} còn sống` : `🏁 Vừa kết thúc · ${n} người`;
+      const can = ph === 'lobby' && n < MAX ? 'Vào' : r.allowSpec === false ? '' : 'Xem';
+      out.push({ code, st, host, spec, can, ord: r.createdAt || 0 });
+    } else {
+      const names = pl.map(([, p]) => p.name).join(' vs '), ph = r.phase;
+      const st = ph === 'wait' ? `⏳ Đang chờ đối thủ · ${pl.length}/2 người` : ph === 'play' ? `🎮 Đang chơi · ${r.moves || 0} nước` : `🏁 Vừa kết thúc`;
+      out.push({ code, st, host: names, spec, can: pl.length < 2 ? 'Vào' : 'Xem', ord: r.createdAt || 0 });
+    }
+  }
+  return out.sort((a, b) => b.ord - a.ord).slice(0, 15);
+}
+function roomListInner() {
+  const it = roomListItems();
+  return `<div class="note">🟢 ${onlineN} người đang online · ${it.length} phòng đang mở</div>` + (it.length ? it.map(x => `<div class="rrow"><span class="rc">${esc(x.code)}</span><div class="ri">${x.st}<div class="note">${rlKind === 'rooms' ? 'Chủ phòng: ' : ''}${esc(x.host)}${x.spec ? ` · 👀 ${x.spec} khán giả` : ''}</div></div>${x.can ? `<button data-act="pickRoom" data-code="${esc(x.code)}">${x.can === 'Vào' ? 'Chọn phòng này' : 'Chọn để xem'}</button>` : '<span class="note">đã đóng khán đài</span>'}</div>`).join('') : '<div class="note" style="margin-top:8px">Chưa có phòng nào đang mở. Nhập số phòng ở trên để tạo phòng mới.</div>');
+}
+function roomsCardHTML() { return B.mode !== 'firebase' ? '' : `<div class="card"><div class="sec">🏠 Phòng đang mở</div><div id="roomlist">${roomListInner()}</div></div>`; }
+function refreshRoomList() {
+  const k = homeKind();
+  if (k !== rlKind) { if (rlUnwatch) rlUnwatch(); rlUnwatch = null; rlKind = k; rlRaw = null; rlSig = ''; if (k) rlUnwatch = B.watch(k, v => { rlRaw = v; refreshRoomList(); }); }
+  const el = document.getElementById('roomlist'); if (!el || !k) return;
+  const html = roomListInner(); if (html !== rlSig) { rlSig = html; el.innerHTML = html; }
+}
+setInterval(refreshRoomList, 2000);
+
 /* ============ Khởi động ============ */
 B = await makeBackend();
+if (B.mode === 'firebase') presenceStart();
 if (B.mode === 'firebase') B.watch('meta/botBeat', v => { botBeat = v || 0; beatLoaded = true; updateClock(); tickHost(); });
 homeName = store().getItem('masoi_name') || '';
 const qRoom = new URLSearchParams(location.search).get('room');
