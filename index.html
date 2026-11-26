@@ -189,7 +189,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126i';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, durOf, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261126j';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -812,13 +812,14 @@ function chatBox(ch) {
 }
 function chatSplit() {
   const p = S.players || {}, mine = (S.roles || {})[me.pid], alive = p[me.pid] && p[me.pid].alive;
-  const chs = ['day']; if (mine === 'wolf') chs.push('wolf'); if (!alive) chs.push('dead');
+  const chs = me.spec ? ['day', 'wolf', 'dead'] : ['day'];   // khán giả thấy đủ 3 khung (chỉ đọc)
+  if (!me.spec) { if (mine === 'wolf') chs.push('wolf'); if (!alive) chs.push('dead'); }
   if (S.phase === 'night' && chs.includes('wolf')) chs.unshift(chs.splice(chs.indexOf('wolf'), 1)[0]);   // đêm: khung Sói lên đầu
   return chs.map(chatBox).join('');
 }
 function chatHTML() {   // phòng chờ và khán đài (đang chơi): một khung gộp; đang chơi: các khung tách riêng; hết ván: chỉ còn một khung chat chung
   if (S.phase === 'end') return chatBox('day');
-  if (!me.spec && S.phase !== 'lobby') return chatSplit();
+  if (S.phase !== 'lobby') return chatSplit();
   const tabs = chatTabs().filter(t => !me.spec); if (!tabs.some(t => t[0] === chatTab)) chatTab = 'day';
   const msgs = Object.entries(S.chat || {}).filter(([, m]) => chatSees(m.c)).sort((a, b) => a[0] < b[0] ? -1 : 1).slice(-80);
   const why = chatRule(chatTab);
