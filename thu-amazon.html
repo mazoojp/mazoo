@@ -28,7 +28,7 @@
 <div class="wrap">
   <a class="back" href="./">← Về trang Ma sói</a>
   <h1>🏠 Đồ gia dụng Nhật Bản</h1>
-  <p class="note">Gợi ý đồ gia dụng thường dùng ở Nhật cho bạn đang sống ở đây. Bấm vào sẽ mở trang tìm kiếm trên Amazon Nhật, bạn tự xem giá, đánh giá và chọn mẫu phù hợp.</p>
+  <p class="note">Dán link sản phẩm bất kỳ trên Amazon Nhật vào khung đầu để tạo link tiếp thị. Bên dưới là các trang đang giảm giá của Amazon, giá và thời hạn do Amazon quyết định.</p>
   <p class="note" id="disc-top">Trang này có liên kết tiếp thị: nếu bạn mua qua liên kết, người làm trang có thể nhận một khoản hoa hồng nhỏ, giá bạn trả không đổi. / Amazonのアソシエイトとして、適格販売により収入を得ています。</p>
   <div class="warn" id="owner" hidden>Chủ trang: chưa điền mã Amazon Associates (biến <code>AMAZON_TAG</code> đầu phần script), nên các liên kết bên dưới chưa tính hoa hồng.</div>
   <div class="card gen">
@@ -40,37 +40,34 @@
     <div id="gout" hidden><div class="out" id="gurl"></div><div class="row"><button id="cp">Sao chép</button><a class="buy" id="gopen" target="_blank" rel="sponsored noopener nofollow">Mở thử</a></div><p class="note" id="gnote" style="margin-bottom:0"></p></div>
     <p class="note" style="margin-bottom:0">Link rút gọn (amzn.to, amzn.asia, a.co) không đọc được ở đây: hãy mở link đó ra rồi sao chép địa chỉ đầy đủ trên thanh địa chỉ.</p>
   </div>
-  <div id="list"></div>
+  <div class="card">
+    <h2>🔥 Đang sale trên Amazon Nhật</h2>
+    <p class="note" style="margin-top:0">Các trang dưới đây do Amazon cập nhật liên tục, nên luôn là đợt giảm giá hiện tại. Giá và thời hạn xem trên Amazon.</p>
+    <div id="deals"></div>
+  </div>
+  <div class="card" id="picksCard" hidden>
+    <h2>⭐ Chọn lọc đang giảm giá</h2>
+    <div id="picks"></div>
+  </div>
   <p class="disc">Đồ điện ở Nhật dùng điện 100V và phích cắm kiểu Nhật. Nếu định mang về Việt Nam (220V) thì cần kiểm tra điện áp, nếu không có thể hỏng hoặc không an toàn. Amazon và logo Amazon là thương hiệu của Amazon.com, Inc. hoặc các công ty liên kết. Giá, tình trạng còn hàng và khả năng giao đến Việt Nam do Amazon quyết định và có thể thay đổi, hãy kiểm tra trên trang Amazon trước khi mua.</p>
 </div>
 <script>
 // Điền mã Amazon Associates của bạn (ví dụ 'ten-22') để link tính hoa hồng. Để trống thì link vẫn mở được nhưng không có hoa hồng.
 const AMAZON_TAG = 'butanium013-22';
 const AMAZON_HOST = 'https://www.amazon.co.jp';
-const GROUPS = [
-  { t: '🍚 Nhà bếp', items: [
-    ['Nồi cơm điện', 'Nồi cơm điện Nhật như Zojirushi, Tiger nấu cơm dẻo, giữ ấm tốt.', '炊飯器 象印'],
-    ['Bình đun nước điện', 'Ấm đun nước điện, bình giữ nước nóng dùng pha trà, mì, cà phê.', '電気ケトル'],
-    ['Nồi áp suất', 'Hầm nấu nhanh, tiết kiệm gas và điện.', '電気圧力鍋'],
-    ['Bếp nướng điện / lẩu (hot plate)', 'Nướng, lẩu và nấu nhiều món trên một chiếc bếp, hợp ăn cùng nhóm bạn.', 'ホットプレート'],
-    ['Dao bếp Nhật (santoku)', 'Dao đa năng thông dụng trong bếp nhà Nhật.', '三徳包丁'],
-  ]},
-  { t: '🧹 Dọn dẹp và không khí', items: [
-    ['Máy hút bụi không dây', 'Nhẹ, gọn, hợp phòng trọ và căn hộ nhỏ.', 'コードレス掃除機'],
-    ['Robot hút bụi', 'Tự dọn sàn khi bạn đi làm.', 'ロボット掃除機'],
-    ['Máy lọc không khí', 'Lọc bụi mịn và phấn hoa, hữu ích vào mùa dị ứng.', '空気清浄機'],
-    ['Máy hút ẩm', 'Phơi đồ trong nhà vào mùa mưa, giảm ẩm mốc.', '衣類乾燥除湿機'],
-  ]},
-  { t: '❄️ Chống lạnh và chống nóng', items: [
-    ['Máy sưởi quạt gốm', 'Sưởi nhanh, gọn, hợp phòng nhỏ mùa đông.', 'セラミックファンヒーター'],
-    ['Chăn điện', 'Giữ ấm khi ngủ, tiết kiệm hơn bật máy sưởi cả đêm.', '電気毛布'],
-    ['Bình giữ nhiệt (thermos)', 'Giữ nóng hoặc lạnh nhiều giờ, mang đi làm đi học.', 'サーモス 水筒'],
-  ]},
+// Trang sale của Amazon (Amazon tự cập nhật, nên luôn đúng đợt đang diễn ra)
+const DEAL_PAGES = [
+  ['⚡ Tất cả ưu đãi đang diễn ra', 'Time sale và các đợt khuyến mãi lớn của Amazon.', '/deals'],
+  ['⏱️ Time sale trong ngày', 'Ưu đãi giới hạn thời gian, đổi liên tục.', '/gp/goldbox'],
+  ['🏠 Bán chạy: đồ điện gia dụng', 'Bảng xếp hạng đồ điện gia dụng bán chạy nhất.', '/gp/bestsellers/appliances'],
+  ['🍳 Bán chạy: đồ nhà bếp', 'Bảng xếp hạng đồ dùng nhà bếp bán chạy nhất.', '/gp/bestsellers/kitchen'],
+  ['📈 Tăng nhanh: đồ điện gia dụng', 'Món đang được quan tâm nhiều lên nhanh trong 24 giờ.', '/gp/movers-and-shakers/appliances'],
+  ['📈 Tăng nhanh: đồ nhà bếp', 'Món nhà bếp đang lên nhanh trong 24 giờ.', '/gp/movers-and-shakers/kitchen'],
 ];
-const link = q => AMAZON_HOST + '/s?k=' + encodeURIComponent(q) + (AMAZON_TAG ? '&tag=' + encodeURIComponent(AMAZON_TAG) : '');
+// Sản phẩm chọn tay: thêm dạng { n: 'Tên', d: 'Mô tả ngắn', url: 'link Amazon Nhật hoặc mã ASIN', until: 'YYYY-MM-DD' }. Quá hạn "until" thì tự ẩn.
+const PICKS = [];
+
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-document.getElementById('list').innerHTML = GROUPS.map(g => `<div class="card"><h2>${esc(g.t)}</h2>${g.items.map(([n, d, q]) =>
-  `<div class="item"><div><b>${esc(n)}</b><span class="d">${esc(d)}</span></div><a class="buy" href="${link(q)}" target="_blank" rel="sponsored noopener nofollow">Xem trên Amazon</a></div>`).join('')}</div>`).join('');
 if (!AMAZON_TAG) document.getElementById('owner').hidden = false;
 
 // ---- Tạo link tiếp thị từ link Amazon do người dùng dán ----
@@ -98,6 +95,10 @@ function gen() {
   const out = withTag(r.url); $g('gurl').textContent = out; $g('gopen').href = out; $g('cp').textContent = 'Sao chép';
   $g('gnote').textContent = AMAZON_TAG ? '' : 'Chủ trang chưa điền mã Associates nên link này chưa tính hoa hồng.';
 }
+const dealItem = (n, d, href) => `<div class="item"><div><b>${esc(n)}</b><span class="d">${esc(d)}</span></div><a class="buy" href="${href}" target="_blank" rel="sponsored noopener nofollow">Xem trên Amazon</a></div>`;
+$g('deals').innerHTML = DEAL_PAGES.map(([n, d, path]) => dealItem(n, d, withTag(AMAZON_HOST + path))).join('');
+const today = new Date().toISOString().slice(0, 10), picks = PICKS.filter(x => !x.until || x.until >= today).map(x => { const r = parseAmazon(x.url); return r.err ? '' : dealItem(x.n, (x.d || '') + (x.until ? ' · đến ' + x.until : ''), withTag(r.url)); }).join('');
+if (picks) { $g('picks').innerHTML = picks; $g('picksCard').hidden = false; }
 $g('mk').onclick = gen;
 $g('src').addEventListener('keydown', e => { if (e.key === 'Enter') gen(); });
 $g('clr').onclick = () => { $g('src').value = ''; $g('gerr').hidden = true; $g('gout').hidden = true; };
