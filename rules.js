@@ -216,8 +216,10 @@ function nightPlan(room, now) {
   let note = poisonT ? (target && !saved ? `${wolfTxt} và ${nm(poisonT)} bị đầu độc chết.` : `${wolfTxt}, còn ${nm(poisonT)} bị đầu độc chết.`) : (target && !saved ? `${wolfTxt}.` : `${wolfTxt} nên không ai chết.`);
   let announce = 'Đêm qua ' + note.replace(/^Có/, 'có');
   if (room.hideRoles) {   // chế độ căng: không lộ lý do (Sói không cắn / Bảo vệ cứu / Phù thủy cứu / đầu độc), chỉ báo ai chết hoặc đêm an toàn
-    note = deaths.length ? `${deaths.map(nm).join(' và ')} đã chết.` : 'An toàn, không ai chết.';
-    announce = deaths.length ? `Đêm qua ${note}` : 'Đêm qua an toàn, không ai chết.';
+    // Sói không cắn ai và không ai chết: nói rõ "Sói không cắn ai". Có người chết (kể cả bị đầu độc) thì chỉ báo tên, không nói gì thêm để khỏi lộ Phù thủy
+    const quiet = !target ? 'Sói không cắn ai, không ai chết.' : 'An toàn, không ai chết.';
+    note = deaths.length ? `${deaths.map(nm).join(' và ')} đã chết.` : quiet;
+    announce = deaths.length ? `Đêm qua ${note}` : (!target ? 'Đêm qua Sói không cắn ai, không ai chết.' : 'Đêm qua an toàn, không ai chết.');
   }
   deaths.forEach(d => { u['players/' + d + '/alive'] = false; u['dead/' + d] = true; });
   u['log/' + lk(r, 1)] = note; u.announce = announce;
