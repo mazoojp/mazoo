@@ -181,13 +181,13 @@ function switchPlan(room, c, now) {
   return u;
 }
 function startPlan(room, ids, now) {
-  const roles = assignRoles(ids), u = { cmd: null, phase: 'day', round: 0, night: null, votes: null, ready: null, botMem: null, seerLog: null, winner: null, log: null, endedAt: null, chat: null, deadline: now + durOf(room, 'day') * 1000, announce: 'Ván bắt đầu! Buổi sáng mở đầu: mọi người làm quen và trò chuyện với nhau. Hết giờ thì trời tối, Đêm 1 bắt đầu.' };   // mở đầu bằng một buổi sáng nói chuyện (không bỏ phiếu) rồi mới sang đêm 1
+  const roles = assignRoles(ids), u = { cmd: null, phase: 'day', round: 0, night: null, votes: null, ready: null, botMem: null, lastGuard: null, seerLog: null, winner: null, log: null, endedAt: null, chat: null, deadline: now + durOf(room, 'day') * 1000, announce: 'Ván bắt đầu! Buổi sáng mở đầu: mọi người làm quen và trò chuyện với nhau. Hết giờ thì trời tối, Đêm 1 bắt đầu.' };   // mở đầu bằng một buổi sáng nói chuyện (không bỏ phiếu) rồi mới sang đêm 1
   u.dead = null; u.witchUsed = null; u.hunter = null; u.hunterShot = null; u.last = null;
   ids.forEach(id => { u['roles/' + id] = roles[id]; u['players/' + id + '/alive'] = true; u['players/' + id + '/ready'] = null; const pl = room.players[id]; if (pl) u['roster/' + id] = { name: pl.name, t: pl.t || 0, ...(pl.bot ? { bot: true } : {}) }; });
   return { u };
 }
 function againPlan(room) {
-  const u = { cmd: null, phase: 'lobby', round: 0, roles: null, night: null, votes: null, ready: null, botMem: null, seerLog: null, winner: null, log: null, endedAt: null, roster: null, dead: null, witchUsed: null, hunter: null, hunterShot: null, chat: null, announce: null, deadline: null };
+  const u = { cmd: null, phase: 'lobby', round: 0, roles: null, night: null, votes: null, ready: null, botMem: null, lastGuard: null, seerLog: null, winner: null, log: null, endedAt: null, roster: null, dead: null, witchUsed: null, hunter: null, hunterShot: null, chat: null, announce: null, deadline: null };
   Object.entries(room.players || {}).forEach(([id, p]) => { u['players/' + id + '/alive'] = true; u['players/' + id + '/ready'] = p.bot ? true : null; });   // bot luôn sẵn sàng
   // giữ lại kết quả ván vừa rồi (người thắng, diễn biến, vai từng người) để phòng chờ vẫn hiện cho đến khi ván mới bắt đầu
   if (room.winner) u.last = { winner: room.winner, round: room.round || 0, t: room.endedAt || 0, log: room.log || {}, p: Object.entries(room.players || {}).sort((a, b) => (a[1].t || 0) - (b[1].t || 0)).map(([id, p]) => ({ n: p.name, r: (room.roles || {})[id] || null, a: !!p.alive, ...(p.bot ? { bot: true } : {}) })) };
@@ -202,12 +202,14 @@ function pickTarget(room) {   // mục tiêu của Sói: số phiếu cao nhất
 function nightPlan(room, now) {
   const players = room.players, roles = room.roles || {}, r = room.round, n = room.night || {}, al = aliveIds(room), nm = id => players[id].name;
   const target = n.target ? (n.target !== 'none' && players[n.target] && players[n.target].alive ? n.target : null) : pickTarget(room);
-  const guardSave = !!(target && al.some(id => roles[id] === 'guard') && n.guard === target);
+  const guardAlive = al.some(id => roles[id] === 'guard');
+  const guardPick = guardAlive && n.guard && n.guard !== room.lastGuard && players[n.guard] && players[n.guard].alive ? n.guard : null;   // Bảo vệ không được bảo vệ cùng một người hai đêm liên tiếp (chọn trùng thì coi như không bảo vệ ai)
+  const guardSave = !!(target && guardPick === target);
   const witchId = al.find(id => roles[id] === 'witch'), wd = n.witch || {}, used = room.witchUsed || {};
   const healOk = !!(witchId && wd.save && !used.heal && target);   // thuốc cứu: dùng một lần cả ván
   const poisonT = witchId && wd.poison && !used.poison && players[wd.poison] && players[wd.poison].alive ? wd.poison : null;   // thuốc độc: một lần, Bảo vệ không cản được
   const saved = guardSave || healOk;
-  const u = { night: null, votes: null, ready: null };
+  const u = { night: null, votes: null, ready: null, lastGuard: guardPick };   // nhớ người được bảo vệ đêm này để đêm sau không chọn lại
   const seerId = al.find(id => roles[id] === 'seer');
   // Tiên tri chỉ giữ kết quả đêm vừa soi (ghi đè kết quả cũ), không lưu lịch sử để khỏi bị copy dán vào chat
   u.seerLog = seerId && n.seer && players[n.seer] ? { [r]: `Đêm ${r}: ${players[n.seer].name} ${roles[n.seer] === 'wolf' ? 'LÀ SÓI' : 'không phải Sói'}.` } : null;
@@ -312,7 +314,7 @@ export function planBots(room, now) {
         const used = room.witchUsed || {}, tg = n.target === 'none' ? null : n.target;
         u['night/witch'] = { save: !!(tg && !used.heal && hash(b + 'ws' + r) < 0.85), poison: null };
       } else if (roles[b] === 'guard' && !n.guard) {
-        const last = (mem[b] || {}).last, c = al.filter(id => id !== last), t = hpick(c.length ? c : al, b + 'guard' + r);
+        const last = (mem[b] || {}).last, c = al.filter(id => id !== last && id !== room.lastGuard), t = hpick(c.length ? c : al, b + 'guard' + r);
         if (t) { u['night/guard'] = t; u['botMem/' + b + '/last'] = t; }
       }
     }
