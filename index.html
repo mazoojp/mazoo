@@ -204,7 +204,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261127c';
+import { ROLE_NAME, MIN, MAX, CAP_OPTIONS, capOf, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261127d';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -325,8 +325,8 @@ async function joinOrCreate() {   // phòng có sẵn thì vào, chưa có thì 
     return enter({ pid: same[0], name: same[1].name, code });
   }
   if (Object.values(players).some(p => p.bot && p.name.trim().toLowerCase() === name.toLowerCase())) return setErr('Tên này dành cho người máy. Hãy chọn tên khác.');
-  if (Object.keys(players).length >= MAX) {   // phòng đầy: vào Khán đài
-    if (room.allowSpec === false) return setErr('Phòng ' + code + ' đã đủ ' + MAX + ' người và chủ phòng đã tắt Khán đài. Hãy chọn số phòng khác.');
+  if (Object.keys(players).length >= capOf(room)) {   // phòng đầy: vào Khán đài
+    if (room.allowSpec === false) return setErr('Phòng ' + code + ' đã đủ ' + capOf(room) + ' người và chủ phòng đã tắt Khán đài. Hãy chọn số phòng khác.');
     return joinSpec(code, name, 'full');
   }
   const pid = rid();
@@ -350,7 +350,7 @@ async function toSpectator() {
 async function toPlayer() {
   if (!me || !me.spec || !canSwitch()) return;
   const pl = S.players || {};
-  if (Object.keys(pl).length >= MAX) return flash('Phòng đã đủ ' + MAX + ' người, chưa có chỗ trống.');
+  if (Object.keys(pl).length >= capOf(S)) return flash('Phòng đã đủ ' + capOf(S) + ' người, chưa có chỗ trống.');
   if (Object.values(pl).some(p => p.name.trim().toLowerCase() === me.name.trim().toLowerCase())) return flash('Tên "' + me.name + '" đã có người chơi dùng. Hãy thoát và vào lại bằng tên khác.');
   await sendCmd('play');
 }
@@ -390,7 +390,7 @@ function leaveLocal() { if (unwatch) unwatch(); unwatch = null; S = null; me = n
 async function addBot() {
   if (!S || S.phase !== 'lobby' || S.host !== me.pid) return;
   const pl = S.players || {}, used = Object.values(pl).map(p => p.name);
-  if (Object.keys(pl).length >= MAX) return;
+  if (Object.keys(pl).length >= capOf(S)) return;
   const name = '🤖 ' + (BOT_NAMES.find(n => !used.includes('🤖 ' + n)) || 'Bot' + rid().slice(0, 3));
   await B.set(base() + 'players/bot_' + rid(), { name, alive: true, t: tnow(), bot: true, ready: true });
 }
@@ -649,6 +649,7 @@ function playersGrid(withRole, forLobby) {
 const specOn = () => !S || S.allowSpec !== false;
 const fmtSec = n => n % 60 ? n + ' giây' : n / 60 + ' phút';
 const dayBtn = () => `<button data-act="cycleDay" title="Bấm để đổi thời gian thảo luận ban ngày (chỉ chủ phòng, ở phòng chờ)">☀️ Thảo luận: ${fmtSec(durOf(S, 'day'))}</button>`;
+const capBtn = () => `<button data-act="cycleCap" title="Bấm để đổi số người chơi tối đa của phòng: 12, 15 hoặc 20 (chỉ chủ phòng, ở phòng chờ)">👥 Tối đa: ${capOf(S)} người</button>`;
 const nightBtn = () => `<button data-act="cycleNight" title="Bấm để đổi thời gian ban đêm cho Sói và các vai (chỉ chủ phòng, ở phòng chờ)">🌙 Đêm: ${fmtSec(durOf(S, 'night'))}</button>`;
 const hideBtn = () => `<button data-act="toggleHide" title="Luật gốc: người chết lộ vai. Tắt đi thì vai người chết được giữ kín đến hết ván (căng hơn)">🎭 Lộ vai khi chết: ${S && S.hideRoles ? 'Tắt' : 'Bật'}</button>`;
 const specBtn = () => `<button data-act="toggleSpec" title="Cho phép người vào sau (phòng đầy hoặc đang chơi) ngồi xem">👀 Khán đài: ${specOn() ? 'Bật' : 'Tắt'}</button>`;
@@ -669,11 +670,11 @@ function lobbyHTML() {
       <p class="note" style="text-align:center">☀️ Thảo luận ban ngày: <b>${fmtSec(durOf(S, 'day'))}</b> · 🌙 Đêm: <b>${fmtSec(durOf(S, 'night'))}</b> · 🎭 Khi chết: ${S.hideRoles ? 'KHÔNG lộ vai (chế độ căng)' : 'lộ vai (luật gốc)'}</p>
       ${lastGameInline()}
     </div>
-    <div class="card"><div class="sec">Người chơi (${n}/${MAX})<span class="r">${rdy} đã sẵn sàng</span></div>${playersGrid(false, true)}
+    <div class="card"><div class="sec">Người chơi (${n}/${capOf(S)})<span class="r">${rdy} đã sẵn sàng</span></div>${playersGrid(false, true)}
       <div class="row" style="margin-top:12px">
-        ${host && n < MAX ? '<button data-act="addBot">🤖 Thêm người máy</button>' : ''}
+        ${host && n < capOf(S) ? '<button data-act="addBot">🤖 Thêm người máy</button>' : ''}
         <button data-act="toSpec" title="Xuống khán đài để xem, nhường chỗ cho người khác">👀 Xuống khán đài</button>
-        ${host ? specBtn() + hideBtn() + dayBtn() + nightBtn() : ''}
+        ${host ? specBtn() + hideBtn() + dayBtn() + nightBtn() + capBtn() : ''}
         ${host && can && rdy < n ? '<button class="primary" data-act="start">Bắt đầu ngay (chủ phòng)</button>' : ''}
       </div>
     </div>
@@ -723,11 +724,11 @@ function specHTML() {
   const p = S.players || {}, roles = S.roles || {}, nm = id => (p[id] ? esc(p[id].name) : '?');
   const alive = Object.keys(p).filter(id => p[id].alive), specs = onlineSpecs(S);
   const PH = { lobby: ['⏳ Phòng chờ', 'mute'], hunter: ['🏹 Thợ săn bắn', 'red'], night: ['🌙 Ban đêm', 'mute'], day: ['☀️ Ban ngày', 'amber'], vote: ['🗳️ Bỏ phiếu', 'red'], end: ['🏁 Kết thúc', 'green'] }[S.phase];
-  const why = me.why === 'full' ? `Phòng đã đủ ${MAX} người nên bạn vào Khán đài.` : me.why === 'started' ? 'Ván đã bắt đầu nên bạn vào Khán đài.' : me.why === 'self' ? 'Bạn đã xuống Khán đài.' : 'Bạn đang ở Khán đài.';
+  const why = me.why === 'full' ? `Phòng đã đủ ${capOf(S)} người nên bạn vào Khán đài.` : me.why === 'started' ? 'Ván đã bắt đầu nên bạn vào Khán đài.' : me.why === 'self' ? 'Bạn đã xuống Khán đài.' : 'Bạn đang ở Khán đài.';
   let out = `<div class="status"><span class="chip ${PH[1]}">${PH[0]}</span>${S.phase !== 'lobby' ? `<span class="chip mute">${S.round === 0 ? 'Mở đầu ván' : 'Đêm thứ ' + S.round}</span>` : ''}<span class="chip" id="cd"></span><span class="chip mute">${alive.length}/${Object.keys(p).length} còn sống</span></div>`;
   out += rolesSummary() + recapHTML();
-  const full = Object.keys(p).length >= MAX;
-  out += S.phase === 'lobby' || S.phase === 'end' ? `<div class="card"><div class="row" style="align-items:center;gap:12px"><button class="primary" data-act="toPlayer" ${full ? 'disabled' : ''}>🎮 Vào chơi</button><span class="note">${full ? `Phòng đã đủ ${MAX} người, chưa có chỗ trống.` : S.phase === 'end' ? 'Hết ván rồi: còn chỗ trống nên bạn có thể lên làm người chơi cho ván sau.' : 'Phòng còn chỗ trống, bạn có thể lên làm người chơi.'}</span></div></div>` : `<div class="note" style="margin:0 4px">Ván đang chơi. Hết ván, nếu còn chỗ trống bạn có thể bấm “Vào chơi”.</div>`;
+  const full = Object.keys(p).length >= capOf(S);
+  out += S.phase === 'lobby' || S.phase === 'end' ? `<div class="card"><div class="row" style="align-items:center;gap:12px"><button class="primary" data-act="toPlayer" ${full ? 'disabled' : ''}>🎮 Vào chơi</button><span class="note">${full ? `Phòng đã đủ ${capOf(S)} người, chưa có chỗ trống.` : S.phase === 'end' ? 'Hết ván rồi: còn chỗ trống nên bạn có thể lên làm người chơi cho ván sau.' : 'Phòng còn chỗ trống, bạn có thể lên làm người chơi.'}</span></div></div>` : `<div class="note" style="margin:0 4px">Ván đang chơi. Hết ván, nếu còn chỗ trống bạn có thể bấm “Vào chơi”.</div>`;
   out += `<div class="todo">👀 ${why} Khán giả thấy diễn biến ván và các khung chat (khung Sói chỉ hiện “Sói 1, Sói 2…”, không hiện tên thật), không thấy vai của người đang chơi hay hành động bí mật, và không chat được.</div>`;
   if (S.announce) out += `<div class="card ann">${esc(S.announce).replace(/\n/g, '<br>')}</div>`;
   if (S.winner) out += `<div class="card ann"><b>${esc(S.winner)}</b></div>`;
@@ -1629,6 +1630,7 @@ document.addEventListener('click', e => {
   if (a === 'join') { game === 'caro' ? caroJoin() : joinOrCreate(); } else if (a === 'leave') { game === 'caro' ? caroLeave() : leave(); }
   else if (a === 'home') { if (game === 'ngu') { nguSave(); (async () => { if (NCm) await ncLeave(); game = 'masoi'; render(); })(); } else if (game === 'gchat') { gcStop(); game = 'masoi'; render(); } else if (game === 'donate' || game === 'menu') { game = 'masoi'; render(); } else if (game === 'caro') { if (cme) caroLeave(); } else if (me) leave(); }
   else if (a === 'cycleNight') { if (S && S.host === me.pid && S.phase === 'lobby') B.set(base() + 'nightTime', NIGHT_OPTIONS[(NIGHT_OPTIONS.indexOf(durOf(S, 'night')) + 1) % NIGHT_OPTIONS.length]); }
+  else if (a === 'cycleCap') { if (S && S.host === me.pid && S.phase === 'lobby') { const n = Object.keys(S.players || {}).length, nx = CAP_OPTIONS[(CAP_OPTIONS.indexOf(capOf(S)) + 1) % CAP_OPTIONS.length]; if (nx < n) { const ok = CAP_OPTIONS.filter(c => c >= n && c !== capOf(S)); if (!ok.length) return flash('Đang có ' + n + ' người chơi, không giảm được.'); B.set(base() + 'maxPlayers', ok[0]); } else B.set(base() + 'maxPlayers', nx); } }
   else if (a === 'cycleDay') { if (S && S.host === me.pid && S.phase === 'lobby') B.set(base() + 'dayTime', DAY_OPTIONS[(DAY_OPTIONS.indexOf(durOf(S, 'day')) + 1) % DAY_OPTIONS.length]); }
   else if (a === 'pickRoom') { homeCode = el.dataset.code; render(); const i = document.querySelector((homeName || game === 'caro') ? '[data-bind=code]' : '[data-bind=name]'); if (i) i.focus(); }
   else if (a === 'witchSave') B.set(base() + 'night/witch', { save: true, poison: null });
@@ -1698,8 +1700,8 @@ function roomListItems() {
     const host = r.players[r.host] ? r.players[r.host].name : '';
     if (rlKind === 'rooms') {
       const n = pl.length, alive = pl.filter(([, p]) => p.alive).length, rdy = pl.filter(([, p]) => p.ready).length, ph = r.hunter ? 'hunter' : r.phase;
-      const st = ph === 'lobby' ? `⏳ Đang chờ · ${n}/${MAX} người · ${rdy} sẵn sàng` : ph === 'night' ? `🌙 Đang chơi · Đêm thứ ${r.round} · ${alive}/${n} còn sống` : ph === 'day' ? `☀️ Đang chơi · ${r.round === 0 ? 'Mở đầu ván (làm quen)' : 'Ngày thứ ' + r.round + ' (thảo luận)'} · ${alive}/${n} còn sống` : ph === 'vote' ? `🗳️ Đang chơi · Bỏ phiếu ngày ${r.round} · ${alive}/${n} còn sống` : (r.hunter || ph === 'hunter') ? `🏹 Đang chơi · Thợ săn đang bắn · ${alive}/${n} còn sống` : `🏁 Vừa kết thúc · ${n} người`;
-      const can = ph === 'lobby' && n < MAX ? 'Vào' : r.allowSpec === false ? '' : 'Xem';
+      const st = ph === 'lobby' ? `⏳ Đang chờ · ${n}/${capOf(r)} người · ${rdy} sẵn sàng` : ph === 'night' ? `🌙 Đang chơi · Đêm thứ ${r.round} · ${alive}/${n} còn sống` : ph === 'day' ? `☀️ Đang chơi · ${r.round === 0 ? 'Mở đầu ván (làm quen)' : 'Ngày thứ ' + r.round + ' (thảo luận)'} · ${alive}/${n} còn sống` : ph === 'vote' ? `🗳️ Đang chơi · Bỏ phiếu ngày ${r.round} · ${alive}/${n} còn sống` : (r.hunter || ph === 'hunter') ? `🏹 Đang chơi · Thợ săn đang bắn · ${alive}/${n} còn sống` : `🏁 Vừa kết thúc · ${n} người`;
+      const can = ph === 'lobby' && n < capOf(r) ? 'Vào' : r.allowSpec === false ? '' : 'Xem';
       out.push({ code, st, host, spec, can, ord: r.createdAt || 0 });
     } else {
       const names = pl.map(([, p]) => p.name).join(' vs '), ph = r.phase;
@@ -1723,7 +1725,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261127c';
+const APP_V = '20261127d';
 const UPD_NOTE = '<div id="updnote" class="updnote">🔔 Có bản cập nhật mới. Bấm F5 (hoặc Ctrl + Shift + R) để tải lại trang nhé.</div>';
 async function checkNewVersion() {
   try {

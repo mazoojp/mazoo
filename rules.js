@@ -9,6 +9,8 @@ export const DAY_OPTIONS = [60, 120, 180, 300, 600];   // thời gian thảo lu�
 export const NIGHT_OPTIONS = [20, 30, 45, 60, 90];   // thời gian ban đêm (cả Sói chọn mục tiêu) mà chủ phòng được chọn, lưu ở room.nightTime
 export const durOf = (room, ph) => ph === 'day' && DAY_OPTIONS.includes(room && room.dayTime) ? room.dayTime : ph === 'night' && NIGHT_OPTIONS.includes(room && room.nightTime) ? room.nightTime : DUR[ph];
 export const MIN = 4, MAX = 20;
+export const CAP_OPTIONS = [12, 15, 20];   // chủ phòng chọn số người chơi tối đa của phòng (mặc định 20)
+export const capOf = room => room && CAP_OPTIONS.includes(room.maxPlayers) ? room.maxPlayers : MAX;
 export const AGAIN_LOCK = 8;   // giây: hết ván phải chờ chừng này mới bấm được "Chơi ván mới" (để mọi người kịp xem kết quả, không bị một người bấm kéo cả phòng về phòng chờ)
 export const LOBBY_WAIT = 60;   // giây: thiếu người mà không ai vào thêm thì tự thêm người máy
 export const BOT_NAMES = ['Mít', 'Bơ', 'Na', 'Ổi', 'Xoài', 'Cam', 'Dừa', 'Lê', 'Mận', 'Nho', 'Khế', 'Sấu'];
@@ -173,7 +175,7 @@ function switchPlan(room, c, now) {
     if (room.host === by) u.host = rest[0];
   } else {
     const s = sp[by];
-    if (!s || pl[by] || Object.keys(pl).length >= MAX || Object.values(pl).some(x => String(x.name).trim().toLowerCase() === String(s.name).trim().toLowerCase())) return u;
+    if (!s || pl[by] || Object.keys(pl).length >= capOf(room) || Object.values(pl).some(x => String(x.name).trim().toLowerCase() === String(s.name).trim().toLowerCase())) return u;
     u['spectators/' + by] = null; u['players/' + by] = { name: s.name, alive: true, t: now }; u['seen/' + by] = now;
   }
   return u;
