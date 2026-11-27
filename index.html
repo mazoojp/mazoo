@@ -180,6 +180,17 @@
   table.rank th{text-align:left;color:var(--faint);font-weight:500;font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line2)}
   table.rank td{padding:8px;border-bottom:1px solid var(--line2)}
   table.rank tr.me td{background:var(--pri-soft)}
+  /* Top 1-2-3: nền màu huy chương, huy hiệu tròn, tên đậm; hạng 1 có vòng sáng nhấp nháy nhẹ */
+  table.rank tr.top td{padding:12px 8px;font-size:15px}
+  table.rank tr.t1 td{background:#FFF1BF} table.rank tr.t2 td{background:#EDF0F5} table.rank tr.t3 td{background:#F9E3D0}
+  table.rank tr.t1 td:first-child{box-shadow:inset 5px 0 0 #E0A800} table.rank tr.t2 td:first-child{box-shadow:inset 5px 0 0 #9AA5B1} table.rank tr.t3 td:first-child{box-shadow:inset 5px 0 0 #CD7F32}
+  .mdl{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:50%;font-size:19px;line-height:1;background:#fff;box-shadow:0 1px 4px #0003}
+  tr.t1 .mdl{width:38px;height:38px;font-size:24px;box-shadow:0 0 0 2px #E0A800,0 2px 10px #E0A80088;animation:mdlglow 2.4s ease-in-out infinite} tr.t2 .mdl{box-shadow:0 0 0 2px #9AA5B1,0 1px 6px #9AA5B166} tr.t3 .mdl{box-shadow:0 0 0 2px #CD7F32,0 1px 6px #CD7F3266}
+  @keyframes mdlglow{0%,100%{box-shadow:0 0 0 2px #E0A800,0 2px 8px #E0A80066}50%{box-shadow:0 0 0 3px #F5C518,0 2px 16px #F5C518bb}}
+  table.rank tr.top .nm{font-weight:800} table.rank tr.t1 .nm{color:#8A5A00} table.rank tr.t2 .nm{color:#4A5563} table.rank tr.t3 .nm{color:#8A4B16}
+  table.rank tr.t1 td b{color:#8A5A00} .youtag{display:inline-block;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--pri);color:#fff;font-size:11px;font-weight:600;vertical-align:middle}
+  @media (prefers-reduced-motion:reduce){tr.t1 .mdl{animation:none}}
+  @media(max-width:480px){table.rank tr.top td{padding:10px 5px}.mdl{width:28px;height:28px;font-size:17px}tr.t1 .mdl{width:32px;height:32px;font-size:20px}}
   textarea{font:inherit;color:var(--text);width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;outline:none;resize:vertical}
   textarea:focus{border-color:var(--pri);box-shadow:0 0 0 3px #1371e222}
   input[type=checkbox]{width:22px;height:22px;flex:0 0 22px;margin:2px 0 0;padding:0;accent-color:var(--pri);cursor:pointer}
@@ -211,7 +222,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, EXTRA_ORDER, EXTRA_ROLES, rolePlan, extraPicks, startBlock, inPack, coupleOf, wwAllowed, needTwo, LOVE_CHAT, KNIGHT_DELAY, MIN, MAX, CAP_OPTIONS, capOf, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261128e';
+import { ROLE_NAME, EXTRA_ORDER, EXTRA_ROLES, rolePlan, extraPicks, startBlock, inPack, coupleOf, wwAllowed, needTwo, LOVE_CHAT, KNIGHT_DELAY, MIN, MAX, CAP_OPTIONS, capOf, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261128f';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -1463,13 +1474,13 @@ async function resumeAuth() {   // vào lại trang: kiểm tra phiên đăng nh
 const pts = x => 3 * (x.win || 0) + (x.draw || 0);
 function rankList() { return Object.entries(rankData || {}).map(([k, x]) => ({ key: k, ...x })).sort((a, b) => pts(b) - pts(a) || (b.win || 0) - (a.win || 0) || (a.games || 0) - (b.games || 0) || String(a.name).localeCompare(String(b.name))); }
 async function loadRank() { if (rankLoading) return; rankLoading = true; try { rankData = (await B.get('scores')) || {}; } catch (e) { rankData = {}; } finally { rankLoading = false; } render(); }
+const rankCls = i => i < 3 ? 'top t' + (i + 1) : '', medalCell = i => i < 3 ? `<span class="mdl">${['🥇', '🥈', '🥉'][i]}</span>` : i + 1;   // top 1-2-3 nổi bật hơn hẳn
 function rankTable(limit) {
   const list = rankList(), top = list.slice(0, limit);
   if (!rankData) return '<div class="note">Đang tải bảng xếp hạng…</div>';
   if (!top.length) return '<div class="note">Chưa có ai trên bảng xếp hạng. Chơi một ván để lên bảng!</div>';
-  const medal = i => ['🥇', '🥈', '🥉'][i] || (i + 1);
   return `<table class="rank"><thead><tr><th>#</th><th>Tên</th><th>Điểm</th><th>Thắng</th><th>Thua</th><th>Hòa</th><th>Tỉ lệ</th></tr></thead><tbody>${top.map((x, i) =>
-    `<tr class="${auth && x.key === auth.key ? 'me' : ''}"><td>${medal(i)}</td><td>${esc(x.name)}</td><td><b>${pts(x)}</b></td><td>${x.win || 0}</td><td>${x.loss || 0}</td><td>${x.draw || 0}</td><td>${x.games ? Math.round(100 * (x.win || 0) / x.games) + '%' : '-'}</td></tr>`).join('')}</tbody></table>
+    `<tr class="${rankCls(i)} ${auth && x.key === auth.key ? 'me' : ''}"><td>${medalCell(i)}</td><td><span class="nm">${esc(x.name)}</span>${auth && x.key === auth.key ? '<span class="youtag">bạn</span>' : ''}</td><td><b>${pts(x)}</b></td><td>${x.win || 0}</td><td>${x.loss || 0}</td><td>${x.draw || 0}</td><td>${x.games ? Math.round(100 * (x.win || 0) / x.games) + '%' : '-'}</td></tr>`).join('')}</tbody></table>
   <p class="note" style="margin-top:8px">Điểm: thắng 3, hòa 1, thua 0. ${list.length} người chơi.</p>`;
 }
 const rankModalHTML = () => `<div class="modal" data-act="rankBg"><div class="card"><div class="row" style="justify-content:space-between;margin-bottom:6px"><div class="sec" style="margin:0">🏆 Bảng xếp hạng cờ caro</div><button data-act="rank">Đóng</button></div>${rankTable(50)}</div></div>`;
@@ -1780,8 +1791,8 @@ document.addEventListener('click', e => {
 /* ============ Bảng thành tích Ma sói (cộng dồn từ meta/wg, mỗi ván kết thúc có 1 bản ghi) ============ */
 let wgRaw = null, wgUnwatch = null;
 function wgCardHTML() {
-  const t = tallyScores(wgRaw), top = t.slice(0, 20), medal = i => ['🥇', '🥈', '🥉'][i] || i + 1;
-  return `<div class="card" id="wgcard"><div class="sec">🏆 Bảng thành tích Ma sói</div>${top.length ? `<div style="overflow-x:auto"><table class="rank"><thead><tr><th>#</th><th>Tên</th><th>Ván</th><th>🐺 Sói</th><th>🧑‍🌾 Dân</th><th>🔮 Tiên tri</th><th>🛡️ Bảo vệ</th><th>🧙 Phù thủy</th><th>🏹 Thợ săn</th><th>👑 Trưởng làng</th><th>Thắng</th><th>Thua</th><th>Tỉ lệ</th></tr></thead><tbody>${top.map((x, i) => `<tr class="${homeName && x.key === scoreKeyOf(homeName) ? 'me' : ''}"><td>${medal(i)}</td><td><b>${esc(x.name)}</b></td><td>${x.games}</td><td>${x.wolf}</td><td>${x.vill}</td><td>${x.seer}</td><td>${x.guard}</td><td>${x.witch || 0}</td><td>${x.hunter || 0}</td><td>${x.chief || 0}</td><td><b>${x.win}</b></td><td>${x.loss}</td><td>${Math.round(100 * x.win / x.games)}%</td></tr>`).join('')}</tbody></table></div>`
+  const t = tallyScores(wgRaw), top = t.slice(0, 20);
+  return `<div class="card" id="wgcard"><div class="sec">🏆 Bảng thành tích Ma sói</div>${top.length ? `<div style="overflow-x:auto"><table class="rank"><thead><tr><th>#</th><th>Tên</th><th>Ván</th><th>🐺 Sói</th><th>🧑‍🌾 Dân</th><th>🔮 Tiên tri</th><th>🛡️ Bảo vệ</th><th>🧙 Phù thủy</th><th>🏹 Thợ săn</th><th>👑 Trưởng làng</th><th>Thắng</th><th>Thua</th><th>Tỉ lệ</th></tr></thead><tbody>${top.map((x, i) => `<tr class="${rankCls(i)} ${homeName && x.key === scoreKeyOf(homeName) ? 'me' : ''}"><td>${medalCell(i)}</td><td><b class="nm">${esc(x.name)}</b>${homeName && x.key === scoreKeyOf(homeName) ? '<span class="youtag">bạn</span>' : ''}</td><td>${x.games}</td><td>${x.wolf}</td><td>${x.vill}</td><td>${x.seer}</td><td>${x.guard}</td><td>${x.witch || 0}</td><td>${x.hunter || 0}</td><td>${x.chief || 0}</td><td><b>${x.win}</b></td><td>${x.loss}</td><td>${Math.round(100 * x.win / x.games)}%</td></tr>`).join('')}</tbody></table></div>`
     : '<div class="note">Chưa có ván nào được ghi. Chơi xong một ván (có từ 2 người thật trở lên) là có tên ở đây.</div>'}
     <div class="note" style="margin-top:8px">Xếp theo số ván thắng; bằng nhau thì ai chơi nhiều ván hơn xếp trên. Người máy và ván chỉ có 1 người thật không tính. Tên được nhận bằng tên bạn nhập khi vào phòng.</div></div>`;
 }
@@ -1842,7 +1853,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261128e';
+const APP_V = '20261128f';
 const UPD_NOTE = '<div id="updnote" class="updnote">🔔 Có bản cập nhật mới. Bấm F5 (hoặc Ctrl + Shift + R) để tải lại trang nhé.</div>';
 async function checkNewVersion() {
   try {
