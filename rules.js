@@ -207,7 +207,8 @@ function nightPlan(room, now) {
   const saved = guardSave || healOk;
   const u = { night: null, votes: null, ready: null };
   const seerId = al.find(id => roles[id] === 'seer');
-  if (seerId && n.seer && players[n.seer]) u['seerLog/' + r] = `Đêm ${r}: ${players[n.seer].name} ${roles[n.seer] === 'wolf' ? 'LÀ SÓI' : 'không phải Sói'}.`;
+  // Tiên tri chỉ giữ kết quả đêm vừa soi (ghi đè kết quả cũ), không lưu lịch sử để khỏi bị copy dán vào chat
+  u.seerLog = seerId && n.seer && players[n.seer] ? { [r]: `Đêm ${r}: ${players[n.seer].name} ${roles[n.seer] === 'wolf' ? 'LÀ SÓI' : 'không phải Sói'}.` } : null;
   if (healOk) u['witchUsed/heal'] = true;
   if (poisonT) u['witchUsed/poison'] = true;
   const by = guardSave && healOk ? 'Bảo vệ và Phù thủy' : healOk ? 'Phù thủy' : 'Bảo vệ';

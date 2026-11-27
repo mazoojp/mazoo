@@ -204,7 +204,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261127a';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261127b';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -806,7 +806,7 @@ function gameHTML() {
   if (!S.log) out += roleCard;   // đầu ván (chưa có diễn biến): thẻ vai nằm trên; sau đó xuống dưới cùng
   out += wolfMatesHTML();
   if (S.announce) out += `<div class="card ann">${esc(S.announce).replace(/\n/g, '<br>')}</div>`;
-  if (myRole === 'seer' && S.seerLog) out += `<div class="card"><div class="sec">🔮 Kết quả soi</div>${Object.keys(S.seerLog).sort((a, b) => a - b).map(k => `<div>${esc(S.seerLog[k])}</div>`).join('')}</div>`;
+  if (myRole === 'seer' && S.seerLog && S.phase !== 'night') { const ks = Object.keys(S.seerLog).filter(k => +k === S.round); if (ks.length) out += `<div class="card"><div class="sec">🔮 Kết quả soi đêm vừa rồi</div>${ks.map(k => `<div>${esc(S.seerLog[k])}</div>`).join('')}<p class="note" style="margin-top:6px">Kết quả chỉ hiện đến hết ngày hôm nay, hãy nhớ kỹ.</p></div>`; }   // không giữ lịch sử: sang đêm mới là mất
 
   const actMark = out.length;
   if (S.phase === 'night') {
@@ -1723,7 +1723,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261127a';
+const APP_V = '20261127b';
 const UPD_NOTE = '<div id="updnote" class="updnote">🔔 Có bản cập nhật mới. Bấm F5 (hoặc Ctrl + Shift + R) để tải lại trang nhé.</div>';
 async function checkNewVersion() {
   try {
