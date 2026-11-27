@@ -125,6 +125,11 @@
   .role.wolf{border-top-color:var(--red)} .role.seer{border-top-color:var(--amber)} .role.guard{border-top-color:var(--green)} .role.vill{border-top-color:var(--pri)}
   .role.witch{border-top-color:#7c3aed} .role.hunter{border-top-color:#ea580c} .role.chief{border-top-color:#ca8a04} .t-chief{color:#a16207} .t-witch{color:#7c3aed} .t-hunter{color:#c2410c}
   .t-wolf{color:var(--red)} .t-seer{color:var(--amber-text)} .t-guard{color:var(--green)} .t-vill{color:var(--pri)}
+  .role.pup,.role.whitewolf{border-top-color:var(--red)} .role.cupid{border-top-color:#db2777} .role.knight{border-top-color:#0891b2} .role.sister{border-top-color:#0d9488} .role.halfwolf{border-top-color:#9333ea}
+  .t-pup{color:var(--red)} .t-whitewolf{color:#475569} .t-cupid{color:#db2777} .t-knight{color:#0e7490} .t-sister{color:#0f766e} .t-halfwolf{color:#7e22ce}
+  .chn.love{background:#FCE7F3;color:#DB2777} .chat.love{border-top:4px solid #DB2777;background:#fff9fc} .tabs button.sel[data-ch=love]{background:#FCE7F3;color:#DB2777}
+  .xrole{display:flex;gap:10px;align-items:flex-start;padding:9px 11px;border:1px solid #e5e7eb;border-radius:12px;margin-top:8px;background:#fff;cursor:pointer;text-align:left;width:100%;font:inherit;color:inherit}
+  .xrole.on{border-color:#16a34a;background:#f0fdf4} .xrole.off{opacity:.55} .xrole .ic{font-size:24px;line-height:1.1} .xrole .tt{flex:1} .xrole .tt small{display:block;color:var(--mute);font-size:12px;margin-top:2px} .xrole .st{font-weight:700;font-size:12px;white-space:nowrap}
   .pulse{animation:pulse 1.4s ease-in-out infinite}
   @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(19,113,226,.45)}50%{box-shadow:0 0 0 8px rgba(19,113,226,0)}}
   .ann{text-align:center;font-size:17px;font-weight:500}
@@ -145,7 +150,7 @@
   .chatlist,#gchatlist,#cchatlist{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;background:#f9f9fb;border-radius:12px;padding:10px;margin-bottom:10px;scrollbar-width:thin;-webkit-overflow-scrolling:touch} .chatlist>*,#gchatlist>*,#cchatlist>*{flex:none} .chatlist>:first-child,#gchatlist>:first-child,#cchatlist>:first-child{margin-top:auto}   /* tin ít thì dính đáy khung; tin nhiều thì cuộn lên xem lại được */
   .msg{margin:5px 0;overflow-wrap:anywhere}
   .msg .chn{font-weight:700;font-size:12px;padding:1px 7px;border-radius:999px;margin-right:2px} .chn.day{background:#E8F1FD;color:#1371E2} .chn.wolf{background:#FDECEC;color:#DC2626} .chn.dead{background:#EEF0F3;color:#6B7280} .msg b{color:var(--pri)} .msg.wolfmsg b{color:var(--red)} .msg.deadmsg b{color:var(--faint)}
-  .chat.sm{height:min(340px,55vh);position:static;margin-bottom:12px} .chat.sm.day{height:min(640px,90vh)} .chat.sm.dead{height:min(560px,80vh)} .chat.sm.wolf{height:min(420px,65vh)} .chat.day{border-top:4px solid var(--pri)} .chat.wolf{border-top:4px solid #DC2626;background:#fffafa} .chat.dead{border-top:4px solid #6B7280}
+  .chat.sm{height:min(340px,55vh);position:static;margin-bottom:12px} .chat.sm.day{height:min(640px,90vh)} .chat.sm.dead{height:min(560px,80vh)} .chat.sm.wolf,.chat.sm.love{height:min(420px,65vh)} .chat.day{border-top:4px solid var(--pri)} .chat.wolf{border-top:4px solid #DC2626;background:#fffafa} .chat.dead{border-top:4px solid #6B7280}
   .chat .open{font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;margin-left:8px;background:#E7F7EE;color:#12803A} .chat .closed{background:#EEF0F3;color:#6B7280}
   .msg.bub{display:flex;flex-direction:column;align-items:flex-start;margin:7px 0} .msg.bub .who{font-size:11px;color:var(--mute);margin:0 6px 2px} .msg.bub .tx{background:#fff;border:1px solid #e5e7eb;border-radius:14px 14px 14px 4px;padding:6px 11px;max-width:85%;overflow-wrap:anywhere}
   .msg.bub.mine{align-items:flex-end} .msg.bub.mine .tx{border-radius:14px 14px 4px 14px}   /* tin của mình vẫn nền trắng như của người khác, chỉ nằm bên phải */
@@ -155,9 +160,9 @@
   #fillhint{min-height:2.8em;font-variant-numeric:tabular-nums} #cd{min-width:78px;justify-content:center;font-variant-numeric:tabular-nums}
   .cols.chat2{grid-template-columns:minmax(0,5fr) minmax(0,7fr)} .cols.chat2>.stack:last-child{align-self:stretch}
   .chatpair{display:grid;grid-template-columns:repeat(var(--n,2),minmax(0,1fr));gap:12px;align-items:start;position:sticky;top:68px}
-  .chatpair .chat.sm,.chatpair .chat.sm.day,.chatpair .chat.sm.dead,.chatpair .chat.sm.wolf{height:min(640px,calc(100vh - 150px));margin-bottom:0}
-  .chatpair.three{position:static} .chatpair.three .chat.sm.wolf{grid-column:1 / -1;height:min(380px,60vh)}
-  @media(max-width:600px){.chatpair,.chatpair.three{grid-template-columns:1fr !important}.chatpair .chat.sm.wolf{grid-column:auto !important}.chatpair .chat .sec .note{display:none}.chatpair .chat.sm,.chatpair .chat.sm.day,.chatpair .chat.sm.dead,.chatpair .chat.sm.wolf,.chatpair.three .chat.sm.wolf{height:340px}}   /* điện thoại hẹp: các khung chat xếp dọc cho đủ chỗ gõ */
+  .chatpair .chat.sm,.chatpair .chat.sm.day,.chatpair .chat.sm.dead,.chatpair .chat.sm.wolf,.chatpair .chat.sm.love{height:min(640px,calc(100vh - 150px));margin-bottom:0}
+  .chatpair.three{position:static} .chatpair.three .chat.sm.wolf,.chatpair.three .chat.sm.love{grid-column:1 / -1;height:min(380px,60vh)}
+  @media(max-width:600px){.chatpair,.chatpair.three{grid-template-columns:1fr !important}.chatpair .chat.sm.wolf,.chatpair .chat.sm.love{grid-column:auto !important}.chatpair .chat .sec .note{display:none}.chatpair .chat.sm,.chatpair .chat.sm.day,.chatpair .chat.sm.dead,.chatpair .chat.sm.wolf,.chatpair .chat.sm.love,.chatpair.three .chat.sm.wolf,.chatpair.three .chat.sm.love{height:340px}}   /* điện thoại hẹp: các khung chat xếp dọc cho đủ chỗ gõ */
   .chatrow{display:flex;gap:8px} .chatrow input{height:42px}
   .chatrow button{min-width:64px}
 
@@ -196,15 +201,16 @@
   .pl2.turn{border-color:var(--pri);background:var(--pri-soft)}
   .mk{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-weight:800;color:#fff;flex:0 0 30px}
   .mk.x{background:#1371E2} .mk.o{background:#EC4920}
-  @media(max-width:991px){.row2{grid-template-columns:1fr}.cols,.cols.chat2{grid-template-columns:1fr}.chatpair{position:static}.chatpair .chat.sm,.chatpair .chat.sm.day,.chatpair .chat.sm.dead,.chatpair .chat.sm.wolf{height:380px}.chat{position:static;height:380px}}
-  @media(max-width:767px){.logo{font-size:20px;gap:4px}.logo .o{width:22px;height:22px;font-size:12px}.topbar .chip{padding:0 8px}.tb{padding:8px 10px}.user{flex:0 0 36px;width:36px;height:36px}.topbar{gap:6px}.sidebar{display:none}.topbar{padding:0 10px}.page{padding:12px 12px 32px}.sbar{flex-direction:column;align-items:stretch}.sel{flex:1 1 auto}.sbar>button.primary{width:100%}.greet{display:none}.tb.hide{display:none}.banner2 .big{font-size:96px;right:12px}.banner2 .bigimg{height:150px;right:8px}.banner2 h2{font-size:24px}.vocab{grid-template-columns:1fr}.code{font-size:36px;letter-spacing:6px}.hero h1{font-size:24px}}
+  @media(max-width:991px){.row2{grid-template-columns:1fr}.cols,.cols.chat2{grid-template-columns:1fr}.chatpair{position:static}.chatpair .chat.sm,.chatpair .chat.sm.day,.chatpair .chat.sm.dead,.chatpair .chat.sm.wolf,.chatpair .chat.sm.love{height:380px}.chat{position:static;height:380px}}
+  @media(max-width:767px){.logo{font-size:20px;gap:4px}.logo .o{width:22px;height:22px;font-size:12px}.topbar .chip{padding:0 8px}.tb{padding:8px 10px}.user{flex:0 0 36px;width:36px;height:36px}.topbar{gap:5px}.topbar .chip.green .lbl{display:none}.topbar .chip{white-space:nowrap}.sidebar{display:none}.topbar{padding:0 10px}.page{padding:12px 12px 32px}.sbar{flex-direction:column;align-items:stretch}.sel{flex:1 1 auto}.sbar>button.primary{width:100%}.greet{display:none}.tb.hide{display:none}.banner2 .big{font-size:96px;right:12px}.banner2 .bigimg{height:150px;right:8px}.banner2 h2{font-size:24px}.vocab{grid-template-columns:1fr}.code{font-size:36px;letter-spacing:6px}.hero h1{font-size:24px}}
+  @media(max-width:380px){.topbar .chip.green{display:none}}
 </style>
 </head>
 <body>
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, CAP_OPTIONS, capOf, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261127i';
+import { ROLE_NAME, EXTRA_ORDER, EXTRA_ROLES, rolePlan, extraPicks, startBlock, inPack, coupleOf, wwAllowed, needTwo, LOVE_CHAT, MIN, MAX, CAP_OPTIONS, capOf, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261128a';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -266,6 +272,12 @@ async function makeBackend() {
 const $app = document.getElementById('app');
 const ROLE_HINT = {
   wolf: 'Mỗi đêm cùng đồng bọn chọn một người để cắn.',
+  pup: 'Bạn là Sói, cùng đồng bọn cắn người mỗi đêm. Nếu bạn chết (bất kỳ lý do gì) thì đêm sau bầy Sói được cắn 2 người.',
+  whitewolf: 'Bạn chơi cùng bầy Sói nhưng thắng một mình: phải sống sót cuối cùng. Từ đêm 3, cách một đêm bạn được cắn trộm một Sói.',
+  cupid: 'Đêm 1 bạn ghép hai người thành cặp đôi (kể cả chính bạn). Một người chết thì người kia chết theo. Ghép Dân với Sói thì hai người thành phe thứ ba.',
+  knight: 'Bạn là Dân. Nếu bị Sói cắn chết, một con Sói trong bầy sẽ chết sau 1 đêm (ván từ 12 người: sau 2 đêm).',
+  sister: 'Bạn là Dân và biết rõ chị em của mình là ai. Không có khả năng gì khác.',
+  halfwolf: 'Ban đầu bạn là Dân. Nếu bị Sói cắn, bạn không chết mà hóa thành Sói. Nếu không bị cắn, bạn chơi phe Dân đến hết.',
   seer: 'Mỗi đêm soi một người xem có phải Sói không.',
   guard: 'Mỗi đêm bảo vệ một người (kể cả bạn) khỏi bị cắn, nhưng không được bảo vệ cùng một người hai đêm liên tiếp.',
   witch: 'Có 1 thuốc cứu và 1 thuốc độc, mỗi loại chỉ dùng một lần cả ván. Mỗi đêm bạn biết ai bị Sói cắn.',
@@ -479,9 +491,9 @@ function render() {
   else if (!me.spec && !roleSeen && (S.roles || {})[me.pid]) { showRole = true; roleSeen = true; }   // đầu ván: thẻ vai lật sẵn, ai muốn ẩn thì bấm vào thẻ
   const key = S.phase + ':' + S.round;
   if (key !== pickKey) {
-    pick = null; pickKey = key; witchOpen = false;
+    pick = null; pickKey = key; witchOpen = false; cupidA = null;
     const mine = (S.roles || {})[me.pid], alive = S.players && S.players[me.pid] && S.players[me.pid].alive;
-    chatTab = S.phase === 'night' && mine === 'wolf' && alive ? 'wolf' : (alive === false && S.phase !== 'end' ? 'dead' : 'day');
+    chatTab = S.phase === 'night' && inPack(S, me.pid) && alive ? 'wolf' : (alive === false && S.phase !== 'end' ? 'dead' : 'day');
   }
   const sy = window.scrollY, sx = window.scrollX;   // vẽ lại cả trang mỗi khi có thay đổi: giữ nguyên vị trí người đang cuộn đọc (không bị kéo về ô nhập)
   $app.innerHTML = shell(me.spec ? specHTML() : S.phase === 'lobby' ? lobbyHTML() : gameHTML());
@@ -545,7 +557,7 @@ function shell(inner) {
       <header class="topbar">
         ${logo}<span class="greet">${cx ? 'Chào ' + esc(cx.name) + '!' : 'Chào bạn!'}</span>
         <span class="spacer"></span>
-        ${B.mode === 'firebase' ? `<span class="chip green" title="Số người đang mở trang web">🟢 <span class="onlinecnt">${onlineN}</span> online</span>` : ''}
+        ${B.mode === 'firebase' ? `<span class="chip green" title="Số người đang mở trang web">🟢 <span class="onlinecnt">${onlineN}</span><span class="lbl">&nbsp;online</span></span>` : ''}
         ${inRoom ? `<span class="chip">Phòng ${esc(cx.code)}</span>` : ''}
         ${inRoom ? '<button class="primary tb hide" data-act="invite">Mời bạn bè</button>' : ''}
         <button class="tb" data-act="help">Cách chơi</button>
@@ -586,6 +598,9 @@ function helpHTML() {
     <li>🧑‍🌾 <b>Dân làng</b>: không có khả năng đặc biệt, dùng lời nói và lá phiếu.</li>
   </ul>
   <p class="note">${MIN}–5 người có 1 Sói; 6–8 có 2 Sói và thêm Bảo vệ; 7 người trở lên thêm Trưởng làng; 8 người trở lên thêm Phù thủy; 9–12 có 3 Sói; 10 người trở lên thêm Thợ săn; 13–16 có 4 Sói; 17–${MAX} có 5 Sói. Luôn có 1 Tiên tri. Phòng ${MIN}–${MAX} người.</p>
+  <h3>🎭 Vai đặc biệt (tùy chọn)</h3>
+  <p>Chủ phòng có thể bật thêm vai ở phòng chờ (nút <b>🎭 Vai đặc biệt</b>). Mặc định tắt hết, ván chia vai như bình thường. Vai thêm chỉ bật được khi phòng đủ người.</p>
+  <ul>${EXTRA_ORDER.map(k => `<li>${EXTRA_ROLES[k].icon} <b>${ROLE_NAME[k]}</b> (từ ${EXTRA_ROLES[k].min} người): ${esc(EXTRA_ROLES[k].desc)}</li>`).join('')}</ul>
   <h3>🔁 Một vòng chơi</h3>
   <ol>
     <li>Vào phòng, nhập tên, bấm <b>Sẵn sàng</b>. Mọi người sẵn sàng thì ván tự bắt đầu. Thiếu người mà chờ ${LOBBY_WAIT} giây không ai vào thì tự thêm người máy.</li>
@@ -633,13 +648,25 @@ function homeHTML() {
 }
 
 /* ---------- Danh sách người chơi dạng thẻ ---------- */
+// ván có người chơi biết vai của nhau: bầy Sói, hai Chị em, cặp đôi
+function loveOf(pid) {   // người yêu của pid (cặp đôi Cupid ghép), hoặc null; đêm 1 thì lấy theo lựa chọn Cupid vừa chọn
+  const c = coupleOf(S) || (S.phase === 'night' && S.round === 1 && S.night && S.night.cupid && S.night.cupid.a && S.night.cupid.b ? [S.night.cupid.a, S.night.cupid.b] : null);
+  return c && c.includes(pid) ? c[0] === pid ? c[1] : c[0] : null;
+}
+function knowsRole(id) {
+  const roles = S.roles || {}, my = me.pid;
+  if (id === my) return true;
+  if (inPack(S, my) && inPack(S, id)) return true;
+  if (roles[my] === 'sister' && roles[id] === 'sister') return true;
+  return loveOf(my) === id;
+}
 function playersGrid(withRole, forLobby) {
   const p = S.players || {}, roles = S.roles || {}, host = S.host === me.pid;
   const iAmDead = !forLobby && !me.spec && !!p[me.pid] && !p[me.pid].alive;   // người đã chết thấy vai của tất cả; ai chết thì vai được công khai
   return `<div class="pgrid">${Object.entries(p).sort((a, b) => a[1].t - b[1].t).map(([id, v]) => {
     const tags = (id === S.host ? '<span class="chip" style="height:22px;font-size:11px">chủ phòng</span> ' : '') + (v.bot ? '<span class="chip mute" style="height:22px;font-size:11px">người máy</span>' : '');
     const meta = forLobby ? (v.ready ? '<span class="chip green" style="height:22px;font-size:11px">✅ sẵn sàng</span>' : '<span class="meta">⏳ chưa sẵn sàng</span>')
-      : ((withRole || (!v.alive && !S.hideRoles) || iAmDead || (!forLobby && !me.spec && roles[me.pid] === 'wolf' && roles[id] === 'wolf')) && roles[id] ? `<span class="meta t-${roles[id]}">${ROLE_NAME[roles[id]]}${v.alive ? '' : ' · đã chết'}</span>` : v.alive ? '<span class="meta">còn sống</span>' : '<span class="meta">đã chết</span>');
+      : ((withRole || (!v.alive && !S.hideRoles) || iAmDead || (!forLobby && !me.spec && knowsRole(id))) && roles[id] ? `<span class="meta t-${roles[id]}">${ROLE_NAME[roles[id]]}${v.alive ? '' : ' · đã chết'}</span>` : v.alive ? '<span class="meta">còn sống</span>' : '<span class="meta">đã chết</span>');
     const x = forLobby && v.bot && host ? `<button class="x ghost" data-act="rmBot" data-pid="${id}" style="min-height:28px;padding:2px 10px;font-size:12px">Xóa</button>`
       : forLobby && !v.bot && host && id !== me.pid && !v.ready ? `<button class="x ghost" data-act="kick" data-pid="${id}" title="Mời người chưa sẵn sàng ra khỏi phòng" style="min-height:28px;padding:2px 10px;font-size:12px">Mời ra</button>` : '';
     return `<div class="ptile ${v.alive ? '' : 'dead'}">${avatar(v.name)}<div style="min-width:0"><span class="nm">${esc(v.name)}${id === me.pid ? ' (bạn)' : ''}</span>${tags} ${meta}</div>${x}</div>`;
@@ -653,11 +680,29 @@ const dayBtn = () => `<button data-act="cycleDay" title="Bấm để đổi th�
 const capBtn = () => `<button data-act="cycleCap" title="Bấm để đổi số người chơi tối đa của phòng: 12, 15 hoặc 20 (chỉ chủ phòng, ở phòng chờ)">👥 Tối đa: ${capOf(S)} người</button>`;
 const nightBtn = () => `<button data-act="cycleNight" title="Bấm để đổi thời gian ban đêm cho Sói và các vai (chỉ chủ phòng, ở phòng chờ)">🌙 Đêm: ${fmtSec(durOf(S, 'night'))}</button>`;
 const hideBtn = () => `<button data-act="toggleHide" title="Luật gốc: người chết lộ vai. Tắt đi thì vai người chết được giữ kín đến hết ván (căng hơn)">🎭 Lộ vai khi chết: ${S && S.hideRoles ? 'Tắt' : 'Bật'}</button>`;
+let extraOpen = false;   // chủ phòng đang mở bảng chọn vai đặc biệt
+const nPlayers = () => Object.keys((S && S.players) || {}).length;
+const extraBtn = () => { const k = extraPicks(S).length; return `<button data-act="toggleExtraPanel" title="Bật thêm vai đặc biệt cho ván (mặc định tắt hết, chia vai như thường)">🎭 Vai đặc biệt: ${k ? k + ' vai' : 'mặc định'}</button>`; };
+function extraLine() {   // dòng thông tin cho mọi người ở phòng chờ
+  const picks = extraPicks(S); if (!picks.length) return '';
+  const rp = rolePlan(nPlayers(), picks), bad = Object.values(rp.bad);
+  return `<p class="note" style="text-align:center">🎭 Vai đặc biệt: <b>${picks.map(k => ROLE_NAME[k]).join(', ')}</b>${bad.length ? '<br>⚠️ Chưa đủ điều kiện nên ván chưa bắt đầu được.' : ''}</p>`;
+}
+function extraPanelHTML() {   // chỉ chủ phòng, ở phòng chờ
+  const n = nPlayers(), picks = extraPicks(S), rp = rolePlan(n, picks);
+  return `<div class="card"><div class="sec">🎭 Vai đặc biệt<span class="r">${picks.length ? picks.length + ' vai đang bật' : 'đang tắt hết = chia vai như thường'}</span></div>
+    <p class="note" style="margin-top:0">Bật thêm vai cho ván này. Vai thêm thay vào chỗ Dân (Sói con và Sói trắng thay một Sói). Phòng đang có ${n} người; vai chưa đủ điều kiện thì không bật được. Nếu có người rời phòng làm vai đang bật không còn đủ điều kiện thì ván <b>không bắt đầu</b> cho tới khi bạn bỏ chọn vai đó hoặc đủ người trở lại.</p>
+    ${EXTRA_ORDER.map(k => { const d = EXTRA_ROLES[k], on = picks.includes(k), bad = rp.bad[k];
+      const st = on ? (bad ? '⚠️ Chưa đủ, chặn bắt đầu' : '✅ Đang bật') : n < d.min ? `Cần ≥ ${d.min} người` : 'Đang tắt';
+      return `<button class="xrole ${on && !bad ? 'on' : ''} ${!on && n < d.min ? 'off' : ''}" data-act="toggleExtra" data-role="${k}"><span class="ic">${d.icon}</span><span class="tt"><b>${ROLE_NAME[k]}</b> <small style="display:inline;margin-left:4px">từ ${d.min} người</small><small>${esc(d.desc)}</small>${on && bad ? `<small style="color:#c2410c">${esc(bad)}</small>` : ''}</span><span class="st">${st}</span></button>`; }).join('')}
+  </div>`;
+}
 const specBtn = () => `<button data-act="toggleSpec" title="Cho phép người vào sau (phòng đầy hoặc đang chơi) ngồi xem">👀 Khán đài: ${specOn() ? 'Bật' : 'Tắt'}</button>`;
 function lobbyHTML() {
   const pl = S.players || {}, n = Object.keys(pl).length, host = S.host === me.pid, can = n >= MIN;
   const rdy = Object.values(pl).filter(p => p.ready).length, mineReady = !!(pl[me.pid] && pl[me.pid].ready);
-  const hint = !can ? `Cần thêm ${MIN - n} người nữa (tối thiểu ${MIN}).` : rdy === n ? 'Mọi người đã sẵn sàng, đang bắt đầu…' : `Đã sẵn sàng ${rdy}/${n}. Ván tự bắt đầu khi tất cả bấm Sẵn sàng.`;
+  const blk = startBlock(S);
+  const hint = blk ? `⚠️ Chưa bắt đầu được: ${esc(blk)} Chủ phòng hãy bỏ chọn vai đó hoặc đợi đủ người.` : !can ? `Cần thêm ${MIN - n} người nữa (tối thiểu ${MIN}).` : rdy === n ? 'Mọi người đã sẵn sàng, đang bắt đầu…' : `Đã sẵn sàng ${rdy}/${n}. Ván tự bắt đầu khi tất cả bấm Sẵn sàng.`;
   return `<div class="cols"><div class="stack">
     ${todoHTML()}
     <div class="card"><div class="note" style="text-align:center">Số phòng</div><div class="code">${esc(me.code)}</div>
@@ -669,14 +714,16 @@ function lobbyHTML() {
       <p class="note" style="text-align:center;margin-top:10px">${hint}</p>
       <p class="note" id="fillhint" style="text-align:center"></p>
       <p class="note" style="text-align:center">☀️ Thảo luận ban ngày: <b>${fmtSec(durOf(S, 'day'))}</b> · 🌙 Đêm: <b>${fmtSec(durOf(S, 'night'))}</b> · 🎭 Khi chết: ${S.hideRoles ? 'KHÔNG lộ vai (chế độ căng)' : 'lộ vai (luật gốc)'}</p>
+      ${extraLine()}
       ${lastGameInline()}
     </div>
+    ${host && extraOpen ? extraPanelHTML() : ''}
     <div class="card"><div class="sec">Người chơi (${n}/${capOf(S)})<span class="r">${rdy} đã sẵn sàng</span></div>${playersGrid(false, true)}
       <div class="row" style="margin-top:12px">
         ${host && n < capOf(S) ? '<button data-act="addBot">🤖 Thêm người máy</button>' : ''}
         <button data-act="toSpec" title="Xuống khán đài để xem, nhường chỗ cho người khác">👀 Xuống khán đài</button>
-        ${host ? specBtn() + hideBtn() + dayBtn() + nightBtn() + capBtn() : ''}
-        ${host && can && rdy < n ? '<button class="primary" data-act="start">Bắt đầu ngay (chủ phòng)</button>' : ''}
+        ${host ? specBtn() + hideBtn() + dayBtn() + nightBtn() + capBtn() + extraBtn() : ''}
+        ${host && can && rdy < n ? `<button class="primary" data-act="start" ${blk ? 'disabled title="Vai đặc biệt chưa đủ điều kiện: bỏ chọn hoặc đợi đủ người"' : ''}>Bắt đầu ngay (chủ phòng)</button>` : ''}
       </div>
     </div>
   </div><div class="stack">${chatHTML()}</div></div>`;
@@ -698,7 +745,14 @@ function todo() {   // một câu nói rõ "bây giờ bạn cần làm gì"
   if (!alive) return ['💀 Bạn đã chết. Cứ xem tiếp, và đừng tiết lộ vai của ai.', true];
   if (S.phase === 'night') {
     const n = S.night || {};
-    if (my === 'wolf') return (n.wolf || {})[me.pid] ? ['Đã chọn xong. Chờ mọi người…', true] : ['🐺 Chọn một người để cắn.', false];
+    if (inPack(S, me.pid)) {
+      const two = needTwo(S), w1 = (n.wolf || {})[me.pid], w2 = (n.wolf2 || {})[me.pid];
+      if (!w1) return [two ? '🐺 Sói con vừa chết: đêm nay bầy Sói cắn 2 người. Chọn người thứ nhất.' : '🐺 Chọn một người để cắn.', false];
+      if (two && !w2) return ['🐺 Chọn thêm người thứ hai để cắn.', false];
+      if (my === 'whitewolf' && wwAllowed(S) && !n.ww) return ['🤍 Bạn được cắn trộm một Sói đêm nay: chọn một Sói, hoặc bỏ qua.', false];
+      return ['Đã chọn xong. Chờ mọi người…', true];
+    }
+    if (my === 'cupid' && S.round === 1) return n.cupid ? ['💘 Đã ghép đôi xong. Chờ trời sáng…', true] : ['💘 Chọn hai người để ghép thành cặp đôi (có thể chọn cả bạn).', false];
     if (my === 'seer') return n.seer ? ['Đã soi xong. Kết quả có vào sáng mai.', true] : ['🔮 Chọn một người để soi xem có phải Sói không.', false];
     if (my === 'witch') return n.witch ? ['Đã quyết định xong. Chờ trời sáng…', true] : !n.target ? ['🧙 Chờ Sói chọn xong để biết đêm nay ai bị cắn…', true] : ['🧙 Có người bị Sói định cắn: chọn cứu, đầu độc ai đó, hoặc bỏ qua.', false];
     if (my === 'guard') return n.guard ? ['Đã chọn xong. Chờ trời sáng…', true] : ['🛡️ Chọn một người để bảo vệ đêm nay.', false];
@@ -750,16 +804,27 @@ function specHTML() {
 /* ---------- Màn hình ván chơi ---------- */
 function rolesSummary() {   // ván này có những vai gì (số lượng ban đầu, công khai như người quản trò vẫn đọc to đầu ván)
   const c = {}; Object.values(S.roles || {}).forEach(r => c[r] = (c[r] || 0) + 1);
-  const ic = { wolf: '🐺', seer: '🔮', guard: '🛡️', witch: '🧙', hunter: '🏹', chief: '👑', vill: '🧑‍🌾' }, txt = ['wolf', 'seer', 'guard', 'chief', 'witch', 'hunter', 'vill'].filter(r => c[r]).map(r => `${ic[r]} ${c[r]} ${ROLE_NAME[r]}`).join(' · ');
+  const ic = ROLE_ICON, txt = ROLE_ORDER.filter(r => c[r]).map(r => `${ic[r]} ${c[r]} ${ROLE_NAME[r]}`).join(' · ');
   return txt ? `<div class="card" style="padding:10px 16px;font-weight:600">📋 Ván này có: ${txt}</div>` : '';
 }
 function wolfMatesHTML() {
   const roles = S.roles || {}, p = S.players || {};
-  if (me.spec || roles[me.pid] !== 'wolf') return '';
-  const mates = Object.keys(roles).filter(id => roles[id] === 'wolf' && id !== me.pid && p[id]);
-  return `<div class="card" style="border-left:4px solid #DC2626;padding:10px 16px">🐺 <b>Đồng bọn Sói của bạn:</b> ${mates.length ? mates.map(id => esc(p[id].name) + (p[id].alive ? '' : ' (đã chết)')).join(', ') : 'không có (bạn là Sói duy nhất)'}</div>`;
+  if (me.spec) return '';
+  let out = '';
+  if (inPack(S, me.pid)) {
+    const mates = Object.keys(roles).filter(id => inPack(S, id) && id !== me.pid && p[id]);
+    out += `<div class="card" style="border-left:4px solid #DC2626;padding:10px 16px">🐺 <b>Đồng bọn Sói của bạn:</b> ${mates.length ? mates.map(id => esc(p[id].name) + (roles[id] === 'wolf' ? '' : ` (${ROLE_NAME[roles[id]]})`) + (p[id].alive ? '' : ' (đã chết)')).join(', ') : 'không có (bạn là Sói duy nhất)'}</div>`;
+    const km = S.knightMark, kl = S.knightLast;   // báo riêng cho bầy Sói: vì sao một Sói sắp chết / vừa chết
+    if (km && p[km.id]) out += `<div class="card" style="border-left:4px solid #0891b2;padding:10px 16px">⚔️ <b>Hiệp sĩ đã bị Sói cắn chết</b> nên kiếm độc của anh ta trúng một Sói: <b>${esc(p[km.id].name)}${km.id === me.pid ? ' (chính là bạn)' : ''}</b> sẽ chết vào <b>đêm ${km.at}</b>.</div>`;
+    if (kl && p[kl.id] && kl.r >= S.round - 1) out += `<div class="card" style="border-left:4px solid #0891b2;padding:10px 16px">⚔️ <b>${esc(p[kl.id].name)}</b> vừa chết vì <b>kiếm độc của Hiệp sĩ</b> (Hiệp sĩ bị Sói cắn chết ở hai đêm trước).</div>`;
+    if (roles[me.pid] === 'halfwolf') out += `<div class="card" style="border-left:4px solid #9333ea;padding:10px 16px">🌗 Bạn đã bị Sói cắn và <b>hóa thành Sói</b>! Từ giờ bạn thuộc phe Sói, cùng cắn người mỗi đêm.</div>`;
+  }
+  if (roles[me.pid] === 'sister') { const o = Object.keys(roles).find(id => roles[id] === 'sister' && id !== me.pid && p[id]); if (o) out += `<div class="card" style="border-left:4px solid #0d9488;padding:10px 16px">👭 <b>Chị em của bạn:</b> ${esc(p[o].name)}${p[o].alive ? '' : ' (đã chết)'}. Hai bạn là Dân và tin được nhau.</div>`; }
+  const lv = loveOf(me.pid);
+  if (lv && p[lv]) { const mixed = inPack(S, me.pid) !== inPack(S, lv); out += `<div class="card" style="border-left:4px solid #DB2777;padding:10px 16px">💘 <b>Cặp đôi:</b> bạn và <b>${esc(p[lv].name)}</b> (${ROLE_NAME[roles[lv]]}). Một người chết thì người kia chết theo.${mixed ? ' Hai bạn khác phe nên là <b>phe thứ ba</b>: thắng khi chỉ còn hai bạn sống sót.' : ''}${p[lv].alive ? '' : ' (người yêu đã chết)'}</div>`; }
+  return out;
 }
-const ROLE_ORDER = ['wolf', 'seer', 'guard', 'chief', 'witch', 'hunter', 'vill'], ROLE_ICON = { wolf: '🐺', seer: '🔮', guard: '🛡️', chief: '👑', witch: '🧙', hunter: '🏹', vill: '🧑‍🌾' };
+const ROLE_ORDER = ['wolf', 'pup', 'whitewolf', 'seer', 'guard', 'chief', 'witch', 'hunter', 'cupid', 'knight', 'sister', 'halfwolf', 'vill'], ROLE_ICON = { wolf: '🐺', pup: EXTRA_ROLES.pup.icon, whitewolf: EXTRA_ROLES.whitewolf.icon, seer: '🔮', guard: '🛡️', chief: '👑', witch: '🧙', hunter: '🏹', cupid: EXTRA_ROLES.cupid.icon, knight: EXTRA_ROLES.knight.icon, sister: EXTRA_ROLES.sister.icon, halfwolf: EXTRA_ROLES.halfwolf.icon, vill: '🧑‍🌾' };
 function revealHTML(list) {   // "ai là ai": gom theo vai, Sói đứng đầu; list = [{n, r, a}]
   const rows = ROLE_ORDER.map(r => ({ r, xs: list.filter(x => x.r === r) })).filter(g => g.xs.length);
   return rows.map(g => `<div style="margin:5px 0">${ROLE_ICON[g.r]} <b class="t-${g.r}">${ROLE_NAME[g.r]}</b>: ${g.xs.map(x => `<b>${esc(x.n)}</b>${x.a ? '' : ' 💀'}`).join(', ')}</div>`).join('');
@@ -785,14 +850,15 @@ function lastGameHTML() {   // phòng chờ vẫn hiện kết quả ván vừa 
     <div style="max-height:220px;overflow-y:auto;margin-top:10px"><div class="sec" style="margin-bottom:4px">📜 Diễn biến</div>${recapLines(g.log)}</div></div>`;
 }
 let witchOpen = false;   // đang mở bảng chọn người để đầu độc
+let cupidA = null;   // Cupid đã chọn người thứ nhất (chưa gửi, đợi chọn người thứ hai)
 function witchHTML() {
   const n = S.night || {}, p = S.players || {}, used = S.witchUsed || {}, alive = Object.keys(p).filter(id => p[id].alive);
   const pot = `<p class="note" style="margin-top:8px">Thuốc cứu: <b>${used.heal ? 'đã dùng' : 'còn'}</b> · Thuốc độc: <b>${used.poison ? 'đã dùng' : 'còn'}</b></p>`;
   if (n.witch) return `<div class="card">🧙 Bạn đã quyết định${n.witch.save ? ': <b>cứu người bị cắn</b>' : n.witch.poison && p[n.witch.poison] ? ': <b>đầu độc ' + esc(p[n.witch.poison].name) + '</b>' : ': <b>không dùng thuốc</b>'}. Chờ trời sáng.${pot}</div>`;
   if (!n.target) return `<div class="card note">🧙 Chờ Sói chọn xong để biết đêm nay ai bị cắn…${pot}</div>`;
-  const vic = n.target !== 'none' && p[n.target] ? p[n.target] : null;
-  let h = `<div class="card"><div class="sec">🧙 Phù thủy</div><p>${vic ? 'Đêm nay Sói định cắn <b>' + esc(vic.name) + '</b>.' : 'Đêm nay Sói không cắn ai.'}</p>
-    <div class="row" style="margin-top:10px">${vic && !used.heal ? `<button class="primary" data-act="witchSave">💊 Cứu ${esc(vic.name)}</button>` : ''}${!used.poison ? `<button data-act="witchPoisonOpen">☠️ ${witchOpen ? 'Đóng bảng đầu độc' : 'Đầu độc một người…'}</button>` : ''}<button class="ghost" data-act="witchSkip">Không dùng thuốc</button></div>${pot}</div>`;
+  const vics = [n.target, n.target2].filter(id => id && id !== 'none' && p[id]), vic = vics[0] ? p[vics[0]] : null;
+  let h = `<div class="card"><div class="sec">🧙 Phù thủy</div><p>${vics.length ? 'Đêm nay Sói định cắn ' + vics.map(id => '<b>' + esc(p[id].name) + '</b>').join(' và ') + '.' : 'Đêm nay Sói không cắn ai.'}</p>
+    <div class="row" style="margin-top:10px">${!used.heal ? vics.map(id => `<button class="primary" data-act="witchSave" data-pid="${id}" data-two="${vics.length > 1 ? 1 : 0}">💊 Cứu ${esc(p[id].name)}</button>`).join('') : ''}${!used.poison ? `<button data-act="witchPoisonOpen">☠️ ${witchOpen ? 'Đóng bảng đầu độc' : 'Đầu độc một người…'}</button>` : ''}<button class="ghost" data-act="witchSkip">Không dùng thuốc</button></div>${pot}</div>`;
   if (witchOpen && !used.poison) h += picker(alive.filter(id => id !== me.pid), 'witchPoison', '☠️ Chọn người để đầu độc (không ai cản được)');
   return h;
 }
@@ -814,10 +880,19 @@ function gameHTML() {
   if (S.phase === 'night') {
     const n = S.night || {}, wv = n.wolf || {};
     if (!iAlive) out += '<div class="card note">Bạn đã chết. Hãy xem tiếp trong im lặng.</div>';
-    else if (myRole === 'wolf') {
-      const mates = Object.keys(roles).filter(id => roles[id] === 'wolf' && id !== me.pid && p[id]);
-      out += wv[me.pid] ? `<div class="card">Bạn đã chọn cắn <b>${esc(p[wv[me.pid]].name)}</b>. Chờ mọi người xong…</div>`
-        : picker(alive.filter(id => roles[id] !== 'wolf'), 'wolf', 'Chọn người để cắn');
+    else if (inPack(S, me.pid)) {
+      const cand = alive.filter(id => !inPack(S, id)), two = needTwo(S), w2 = n.wolf2 || {};
+      if (!wv[me.pid]) out += picker(cand, 'wolf', two ? '🐺 Đêm cắn đôi: chọn người thứ nhất để cắn' : 'Chọn người để cắn');
+      else if (two && !w2[me.pid]) out += `<div class="card">Người thứ nhất: <b>${esc(p[wv[me.pid]].name)}</b>.</div>` + picker(cand.filter(id => id !== wv[me.pid]), 'wolf2', '🐺 Chọn thêm người thứ hai để cắn');
+      else {
+        out += `<div class="card">Bạn đã chọn cắn <b>${esc(p[wv[me.pid]].name)}</b>${two && w2[me.pid] ? ' và <b>' + esc(p[w2[me.pid]].name) + '</b>' : ''}. Chờ mọi người xong…</div>`;
+        if (myRole === 'whitewolf' && wwAllowed(S)) out += n.ww ? `<div class="card">🤍 ${n.ww === 'none' ? 'Bạn không cắn trộm ai đêm nay.' : 'Bạn đã cắn trộm <b>' + esc((p[n.ww] || {}).name || '?') + '</b>.'}</div>`
+          : picker(alive.filter(id => inPack(S, id) && id !== me.pid), 'ww', '🤍 Cắn trộm một Sói (không cần bàn với bầy)') + '<div class="row" style="margin-bottom:12px"><button class="ghost" data-act="wwSkip">Bỏ qua, không cắn trộm</button></div>';
+      }
+    } else if (myRole === 'cupid' && S.round === 1) {
+      if (n.cupid) out += `<div class="card">💘 Bạn đã ghép <b>${esc((p[n.cupid.a] || {}).name || '?')}</b> và <b>${esc((p[n.cupid.b] || {}).name || '?')}</b>. Hai người đó đang nói chuyện riêng.</div>`;
+      else if (!cupidA || !p[cupidA]) out += picker(alive, 'cupidA', '💘 Chọn người thứ nhất của cặp đôi');
+      else out += `<div class="card">Người thứ nhất: <b>${esc(p[cupidA].name)}</b>. <button class="ghost" data-act="cupidReset" style="margin-left:8px">Chọn lại</button></div>` + picker(alive.filter(id => id !== cupidA), 'cupidB', '💘 Chọn người thứ hai của cặp đôi');
     } else if (myRole === 'seer') out += n.seer ? `<div class="card">Bạn đã soi <b>${esc(p[n.seer].name)}</b>. Kết quả có vào sáng mai.</div>` : picker(alive.filter(id => id !== me.pid), 'seer', 'Chọn người để soi');
     else if (myRole === 'witch') out += witchHTML();
     else if (myRole === 'guard') out += n.guard ? `<div class="card">Bạn đã bảo vệ <b>${esc(p[n.guard].name)}</b>.</div>` : (S.lastGuard && p[S.lastGuard] ? `<div class="card note">Đêm trước bạn đã bảo vệ <b>${esc(p[S.lastGuard].name)}</b>, nên đêm nay không được chọn lại người này.</div>` : '') + picker(alive.filter(id => id !== S.lastGuard), 'guard', 'Chọn người để bảo vệ');
@@ -851,7 +926,7 @@ function chatTabs() {
   if (me.spec) return S.phase === 'lobby' ? [['day', 'Chung']] : [['day', 'Chung'], ['wolf', 'Sói'], ['dead', 'Người chết']];
   const p = S.players || {}, mine = (S.roles || {})[me.pid], alive = p[me.pid] && p[me.pid].alive;
   const t = [['day', 'Chung']];
-  if (mine === 'wolf') t.push(['wolf', 'Sói']);
+  if (inPack(S, me.pid)) t.push(['wolf', 'Sói']);
   if (!alive) t.push(['dead', 'Người chết']);
   return t;
 }
@@ -867,18 +942,25 @@ function chatRule(ch) {   // trả về '' nếu được viết, ngược lại
     return '';
   }
   if (ch === 'wolf') {
-    if (mine !== 'wolf') return 'Chỉ Sói dùng kênh này.';
+    if (!inPack(S, me.pid)) return 'Chỉ Sói dùng kênh này.';
     if (ph === 'end') return '';
     if (!alive) return 'Bạn đã chết.';
     return ph === 'night' ? '' : 'Kênh Sói chỉ mở ban đêm.';
   }
+  if (ch === 'love') {
+    if (!loveOf(me.pid)) return 'Chỉ cặp đôi dùng kênh này.';
+    if (ph === 'end') return '';
+    if (!alive) return 'Bạn đã chết.';
+    return ph === 'night' ? '' : 'Kênh cặp đôi chỉ mở ban đêm.';
+  }
   if (ch === 'dead') return alive && ph !== 'end' ? 'Chỉ người đã chết dùng kênh này.' : '';
   return 'Kênh không hợp lệ.';
 }
-const CH_NAME = { day: 'Chung', wolf: 'Sói', dead: 'Người chết' };
+const CH_NAME = { day: 'Chung', wolf: 'Sói', dead: 'Người chết', love: 'Cặp đôi' };
 function chatSees(ch) {   // kênh nào mình được đọc
   if (ch === 'day' || me.spec || S.phase === 'end') return true;
-  if (ch === 'wolf') return (S.roles || {})[me.pid] === 'wolf';
+  if (ch === 'wolf') return inPack(S, me.pid);
+  if (ch === 'love') return !!loveOf(me.pid);
   if (ch === 'dead') { const p = (S.players || {})[me.pid]; return !!p && !p.alive; }
   return false;
 }
@@ -886,13 +968,13 @@ const chatMsgs = ch => Object.entries(S.chat || {}).filter(([, m]) => m.c === ch
 // Trong ván, mỗi kênh là MỘT KHUNG RIÊNG, ô nhập riêng, không bao giờ nhầm đêm/ngày:
 //   Chat làng (ban ngày) · Chat Sói (ban đêm, chỉ Sói thấy) · Chat người chết
 const wolfAlias = pid => {   // khán giả không thấy tên thật của Sói: chỉ "Sói 1", "Sói 2"… (đánh số theo thứ tự vào phòng)
-  const roles = S.roles || {}, pl = S.players || {}, ws = Object.keys(roles).filter(id => roles[id] === 'wolf').sort((a, b) => ((pl[a] || {}).t || 0) - ((pl[b] || {}).t || 0)), i = ws.indexOf(pid);
+  const roles = S.roles || {}, pl = S.players || {}, ws = Object.keys(roles).filter(id => inPack(S, id)).sort((a, b) => ((pl[a] || {}).t || 0) - ((pl[b] || {}).t || 0)), i = ws.indexOf(pid);
   return i >= 0 ? 'Sói ' + (i + 1) : 'Sói';
 };
 const msgBub = (m, chip) => `<div class="msg bub ${m.pid === me.pid ? 'mine' : ''}"><div class="who">${chip ? `<span class="chn ${m.c}">${CH_NAME[m.c] || 'Chung'}</span> ` : ''}${m.pid === me.pid ? '' : me.spec && m.c === 'wolf' ? wolfAlias(m.pid) : esc(m.name)}</div><div class="tx">${esc(m.text)}</div></div>`;   // tin của mình ở bên phải, của người khác bên trái
 function chatBox(ch) {
   const why = chatRule(ch), draft = chatDrafts[ch] || '';
-  const T = { day: S.phase === 'end' ? ['💬 Chat chung', 'hết ván, ai cũng nói được'] : ['💬 Chat làng', 'ban ngày'], wolf: ['🐺 Chat Sói', 'ban đêm · chỉ Sói thấy'], dead: ['💀 Chat người chết', 'chỉ người chết thấy'] }[ch];
+  const T = { day: S.phase === 'end' ? ['💬 Chat chung', 'hết ván, ai cũng nói được'] : ['💬 Chat làng', 'ban ngày'], wolf: ['🐺 Chat Sói', 'ban đêm · chỉ Sói thấy'], love: ['💘 Chat cặp đôi', 'ban đêm · chỉ hai người thấy'], dead: ['💀 Chat người chết', 'chỉ người chết thấy'] }[ch];
   const msgs = chatMsgs(ch);
   return `<div class="card chat sm ${ch}"><div class="sec">${T[0]}<span class="note" style="margin-left:6px;font-weight:400">${T[1]}</span><span class="open ${why ? 'closed' : ''}">${why ? 'đang đóng' : 'đang mở'}</span></div>
   <div class="chatlist" id="chatlist-${ch}">${msgs.length ? msgs.map(([, m]) => msgBub(m, false)).join('') : '<div class="note">Chưa có tin nhắn.</div>'}</div>
@@ -903,9 +985,9 @@ function chatBox(ch) {
 function chatSplit() {
   const p = S.players || {}, mine = (S.roles || {})[me.pid], alive = p[me.pid] && p[me.pid].alive;
   const chs = me.spec ? ['day', 'wolf', 'dead'] : ['day'];   // khán giả đọc được cả ba khung (chỉ đọc); ở khung Sói tên được thay bằng Sói 1, Sói 2…
-  if (!me.spec) { if (mine === 'wolf') chs.push('wolf'); if (!alive) chs.push('dead'); }
-  if (chs.length === 3) chs.splice(0, 3, 'day', 'dead', 'wolf');   // đủ ba khung (người chết là Sói, hoặc khán giả): Chung và Người chết cạnh nhau, khung Sói nằm dưới
-  else if (S.phase === 'night' && chs.includes('wolf')) chs.unshift(chs.splice(chs.indexOf('wolf'), 1)[0]);   // đêm: khung Sói lên đầu
+  if (!me.spec) { if (inPack(S, me.pid)) chs.push('wolf'); if (loveOf(me.pid)) chs.push('love'); if (!alive) chs.push('dead'); }
+  if (chs.length === 3 && chs.includes('dead') && chs.includes('wolf')) chs.splice(0, 3, 'day', 'dead', 'wolf');   // đủ ba khung (người chết là Sói, hoặc khán giả): Chung và Người chết cạnh nhau, khung Sói nằm dưới
+  else if (S.phase === 'night') for (const k of ['love', 'wolf']) if (chs.includes(k)) chs.unshift(chs.splice(chs.indexOf(k), 1)[0]);   // đêm: khung Sói / cặp đôi lên đầu
   const boxes = chs.map(chatBox).join('');
   return chs.length > 1 ? `<div class="chatpair ${chs.length === 3 ? 'three' : ''}" style="--n:${Math.min(chs.length, 2)}">${boxes}</div>` : boxes;   // từ 2 khung trở lên: xếp ngang nhau, đứng yên khi cuộn trang
 }
@@ -1579,6 +1661,10 @@ async function submit(kind) {
   if (kind === 'wolf') await B.set(b + 'night/wolf/' + me.pid, t);
   else if (kind === 'seer') await B.set(b + 'night/seer', t);
   else if (kind === 'guard') { if (t === S.lastGuard) return; await B.set(b + 'night/guard', t); }
+  else if (kind === 'wolf2') await B.set(b + 'night/wolf2/' + me.pid, t);
+  else if (kind === 'ww') await B.set(b + 'night/ww', t);
+  else if (kind === 'cupidA') { cupidA = t; pick = null; render(); }
+  else if (kind === 'cupidB') { if (cupidA) await B.set(b + 'night/cupid', { a: cupidA, b: t }); }
   else if (kind === 'vote') await B.set(b + 'votes/' + me.pid, t);
   else if (kind === 'hunter') await B.set(b + 'hunterShot', t);
   else if (kind === 'witchPoison') { witchOpen = false; await B.set(b + 'night/witch', { save: false, poison: t }); }
@@ -1632,9 +1718,19 @@ document.addEventListener('click', e => {
   else if (a === 'home') { if (game === 'ngu') { nguSave(); (async () => { if (NCm) await ncLeave(); game = 'masoi'; render(); })(); } else if (game === 'gchat') { gcStop(); game = 'masoi'; render(); } else if (game === 'donate' || game === 'menu') { game = 'masoi'; render(); } else if (game === 'caro') { if (cme) caroLeave(); } else if (me) leave(); }
   else if (a === 'cycleNight') { if (S && S.host === me.pid && S.phase === 'lobby') B.set(base() + 'nightTime', NIGHT_OPTIONS[(NIGHT_OPTIONS.indexOf(durOf(S, 'night')) + 1) % NIGHT_OPTIONS.length]); }
   else if (a === 'cycleCap') { if (S && S.host === me.pid && S.phase === 'lobby') { const n = Object.keys(S.players || {}).length, nx = CAP_OPTIONS[(CAP_OPTIONS.indexOf(capOf(S)) + 1) % CAP_OPTIONS.length]; if (nx < n) { const ok = CAP_OPTIONS.filter(c => c >= n && c !== capOf(S)); if (!ok.length) return flash('Đang có ' + n + ' người chơi, không giảm được.'); B.set(base() + 'maxPlayers', ok[0]); } else B.set(base() + 'maxPlayers', nx); } }
+  else if (a === 'toggleExtraPanel') { extraOpen = !extraOpen; render(); }
+  else if (a === 'toggleExtra') {
+    if (S && S.host === me.pid && S.phase === 'lobby') {
+      const k = el.dataset.role, picks = extraPicks(S);
+      if (picks.includes(k)) B.set(base() + 'extraRoles/' + k, null);
+      else { const r = rolePlan(nPlayers(), [...picks, k]); if (r.bad[k]) return flash(r.bad[k]); B.set(base() + 'extraRoles/' + k, true); }
+    }
+  }
   else if (a === 'cycleDay') { if (S && S.host === me.pid && S.phase === 'lobby') B.set(base() + 'dayTime', DAY_OPTIONS[(DAY_OPTIONS.indexOf(durOf(S, 'day')) + 1) % DAY_OPTIONS.length]); }
   else if (a === 'pickRoom') { homeCode = el.dataset.code; render(); const i = document.querySelector((homeName || game === 'caro') ? '[data-bind=code]' : '[data-bind=name]'); if (i) i.focus(); }
-  else if (a === 'witchSave') B.set(base() + 'night/witch', { save: true, poison: null });
+  else if (a === 'witchSave') B.set(base() + 'night/witch', { save: el.dataset.two === '1' ? el.dataset.pid : true, poison: null });
+  else if (a === 'wwSkip') B.set(base() + 'night/ww', 'none');
+  else if (a === 'cupidReset') { cupidA = null; pick = null; render(); }
   else if (a === 'witchSkip') B.set(base() + 'night/witch', { save: false, poison: null });
   else if (a === 'witchPoisonOpen') { witchOpen = !witchOpen; render(); }
   else if (a === 'kick') { if (S && S.host === me.pid && S.phase === 'lobby') sendCmd('kick', { target: el.dataset.pid }); }
@@ -1649,7 +1745,7 @@ document.addEventListener('click', e => {
   else if (a === 'addBot') addBot();
   else if (a === 'rmBot') B.set(base() + 'players/' + el.dataset.pid, null);
   else if (a === 'lobbyReady') { if (S && S.players && S.players[me.pid]) B.update({ [base() + 'players/' + me.pid + '/ready']: !(S.players[me.pid] && S.players[me.pid].ready), [base() + 'players/' + me.pid + '/readyAt']: Date.now() }); }
-  else if (a === 'start') sendCmd('start'); else if (a === 'again') sendCmd('again'); else if (a === 'ready') ready();
+  else if (a === 'start') { if (startBlock(S)) return flash(startBlock(S) + ' Hãy bỏ chọn vai đó hoặc đợi đủ người.'); sendCmd('start'); } else if (a === 'again') sendCmd('again'); else if (a === 'ready') ready();
   else if (a === 'toggleRole') { showRole = !showRole; if (showRole) roleSeen = true; render(); }
   else if (a === 'invite') invite();
   else if (a === 'copy') copyText(el.dataset.text);
@@ -1726,7 +1822,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261127i';
+const APP_V = '20261128a';
 const UPD_NOTE = '<div id="updnote" class="updnote">🔔 Có bản cập nhật mới. Bấm F5 (hoặc Ctrl + Shift + R) để tải lại trang nhé.</div>';
 async function checkNewVersion() {
   try {
