@@ -21,6 +21,7 @@ window.FIREBASE_CONFIG = {
 window.SHOW_DONATE = false;
 // Tab "Ngủ đêm": false = ẩn hẳn (đổi thành true để hiện lại).
 window.SHOW_NGU = false;
+window.SHOW_MENU = false;   // true thì hiện tab Thực đơn
 // Điền thông tin NHẬN ỦNG HỘ CỦA CHÍNH BẠN. Để trống thì tab hiện "Tác giả chưa thêm cách ủng hộ".
 // Lưu ý: file này công khai nếu bạn đăng repo công khai lên GitHub, số tài khoản sẽ ai cũng thấy.
 window.DONATE = {

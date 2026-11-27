@@ -204,7 +204,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, CAP_OPTIONS, capOf, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261127d';
+import { ROLE_NAME, MIN, MAX, CAP_OPTIONS, capOf, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261127e';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -459,6 +459,7 @@ function updateClock() {
 
 /* ============ Giao diện ============ */
 const nguOn = () => window.SHOW_NGU !== false;   // config.js: SHOW_NGU = false thì ẩn tab Ngủ đêm
+const menuOn = () => window.SHOW_MENU === true;   // config.js: SHOW_MENU = true thì hiện tab Thực đơn (mặc định ẩn)
 const donateOn = () => window.SHOW_DONATE !== false;   // config.js: SHOW_DONATE = false thì ẩn tab Ủng hộ 1 bát ramen
 function render() {
   syncGc(); syncWg();
@@ -529,7 +530,7 @@ function shell(inner) {
       ${gt('caro', 'grid', 'Cờ caro')}
       ${gt('gchat', 'chat', 'Chat tổng')}
       ${nguOn() ? gt('ngu', 'moon', 'Ngủ đêm') : ''}
-      ${gt('menu', 'ramen', 'Thực đơn')}
+      ${menuOn() ? gt('menu', 'ramen', 'Thực đơn') : ''}
       ${donateOn() ? gt('donate', 'ramen', 'Ủng hộ 1 bát ramen') : ''}
       <div class="sep"></div>
       ${it('home', 'home', inRoom ? 'Rời phòng' : 'Trang chủ', !inRoom)}
@@ -621,7 +622,7 @@ function homeHTML() {
         <div class="sel"><span style="color:#868E96;font-size:13px">Tên</span><input data-bind="name" maxlength="16" placeholder="Tên của bạn" value="${esc(homeName)}" autocomplete="off"></div>
         <button class="primary" data-act="join">Vào phòng</button>
       </div>
-      <div class="tabsrow"><button class="pill on" data-act="go" data-game="masoi">🐺 Ma sói</button><button class="pill" data-act="go" data-game="caro">⭕ Cờ caro</button><button class="pill" data-act="go" data-game="gchat">💬 Chat tổng</button>${nguOn() ? '<button class="pill" data-act="go" data-game="ngu">🌙 Ngủ đêm</button>' : ''}<button class="pill" data-act="go" data-game="menu">🍽️ Thực đơn</button>${donateOn() ? '<button class="pill" data-act="go" data-game="donate">🍜 Ủng hộ 1 bát ramen</button>' : ''}<span class="pill">${MIN}–${MAX} người</span><span class="pill">Điện thoại &amp; máy tính</span><span class="pill">Thiếu người có người máy</span>
+      <div class="tabsrow"><button class="pill on" data-act="go" data-game="masoi">🐺 Ma sói</button><button class="pill" data-act="go" data-game="caro">⭕ Cờ caro</button><button class="pill" data-act="go" data-game="gchat">💬 Chat tổng</button>${nguOn() ? '<button class="pill" data-act="go" data-game="ngu">🌙 Ngủ đêm</button>' : ''}${menuOn() ? '<button class="pill" data-act="go" data-game="menu">🍽️ Thực đơn</button>' : ''}${donateOn() ? '<button class="pill" data-act="go" data-game="donate">🍜 Ủng hộ 1 bát ramen</button>' : ''}<span class="pill">${MIN}–${MAX} người</span><span class="pill">Điện thoại &amp; máy tính</span><span class="pill">Thiếu người có người máy</span>
         <button class="vm" data-act="help">Xem luật ›</button></div>
       ${homeErr ? `<div class="err">${esc(homeErr)}</div>` : '<div class="note" style="margin-top:6px">Phòng đã có thì bạn vào chơi cùng. Chưa có thì phòng mới được tạo với số này.</div>'}
     </div>
@@ -1499,7 +1500,7 @@ async function caroSendChat() {
   caroFocusChat(0);
 }
 function caroHomeHTML() {
-  const tabs = `<button class="pill" data-act="go" data-game="masoi">🐺 Ma sói</button><button class="pill on" data-act="go" data-game="caro">⭕ Cờ caro</button><button class="pill" data-act="go" data-game="gchat">💬 Chat tổng</button>${nguOn() ? '<button class="pill" data-act="go" data-game="ngu">🌙 Ngủ đêm</button>' : ''}<button class="pill" data-act="go" data-game="menu">🍽️ Thực đơn</button>${donateOn() ? '<button class="pill" data-act="go" data-game="donate">🍜 Ủng hộ 1 bát ramen</button>' : ''}`;
+  const tabs = `<button class="pill" data-act="go" data-game="masoi">🐺 Ma sói</button><button class="pill on" data-act="go" data-game="caro">⭕ Cờ caro</button><button class="pill" data-act="go" data-game="gchat">💬 Chat tổng</button>${nguOn() ? '<button class="pill" data-act="go" data-game="ngu">🌙 Ngủ đêm</button>' : ''}${menuOn() ? '<button class="pill" data-act="go" data-game="menu">🍽️ Thực đơn</button>' : ''}${donateOn() ? '<button class="pill" data-act="go" data-game="donate">🍜 Ủng hộ 1 bát ramen</button>' : ''}`;
   const me2 = auth ? (rankList().find(x => x.key === auth.key) || { win: 0, loss: 0, draw: 0, games: 0 }) : null;
   const top = !auth ? `<div class="card searchcard">
       <div class="sec">Đăng nhập để chơi cờ caro</div>
@@ -1725,7 +1726,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261127d';
+const APP_V = '20261127e';
 const UPD_NOTE = '<div id="updnote" class="updnote">🔔 Có bản cập nhật mới. Bấm F5 (hoặc Ctrl + Shift + R) để tải lại trang nhé.</div>';
 async function checkNewVersion() {
   try {
@@ -1754,7 +1755,7 @@ await resumeAuth();
 cme = JSON.parse(store().getItem('caro_me') || 'null');
 if (cme && !auth) { store().removeItem('caro_me'); cme = null; }   // chưa đăng nhập thì không tự vào phòng
 const qGame = new URLSearchParams(location.search).get('game');
-if (me) game = 'masoi'; else if (cme || qGame === 'caro') game = 'caro'; else if (qGame === 'menu') game = 'menu'; else if (qGame === 'donate' && window.SHOW_DONATE !== false) game = 'donate'; else if (qGame === 'chat') { game = 'gchat'; gcStart(); } else if (qGame === 'ngu' && window.SHOW_NGU !== false) { game = 'ngu'; nguStart(); }
+if (me) game = 'masoi'; else if (cme || qGame === 'caro') game = 'caro'; else if (qGame === 'menu' && menuOn()) game = 'menu'; else if (qGame === 'donate' && window.SHOW_DONATE !== false) game = 'donate'; else if (qGame === 'chat') { game = 'gchat'; gcStart(); } else if (qGame === 'ngu' && window.SHOW_NGU !== false) { game = 'ngu'; nguStart(); }
 if (game === 'caro') { if (cme) caroEnter(cme); else render(); } else if (me) enter(me); else render();
 </script>
 </body>
