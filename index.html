@@ -127,6 +127,7 @@
   .t-wolf{color:var(--red)} .t-seer{color:var(--amber-text)} .t-guard{color:var(--green)} .t-vill{color:var(--pri)}
   .role.pup,.role.whitewolf{border-top-color:var(--red)} .role.cupid{border-top-color:#db2777} .role.knight{border-top-color:#0891b2} .role.sister{border-top-color:#0d9488} .role.halfwolf{border-top-color:#9333ea}
   .t-pup{color:var(--red)} .t-whitewolf{color:#475569} .t-cupid{color:#db2777} .t-knight{color:#0e7490} .t-sister{color:#0f766e} .t-halfwolf{color:#7e22ce}
+  .tiecard{border-left:5px solid #ca8a04;background:#fffbeb;font-size:15px;line-height:1.5} .tiecard .tt{font-size:18px;font-weight:700;color:#a16207;margin-bottom:4px} .tiecard .tcd{white-space:nowrap;background:#fde68a;border-radius:8px;padding:1px 8px;font-size:15px;font-variant-numeric:tabular-nums;margin-left:4px}
   .chn.love{background:#FCE7F3;color:#DB2777} .chn.sis{background:#CCFBF1;color:#0D9488} .chat.sis.love{border-top-color:#0D9488;background:#f7fdfc} .tabs button.sel[data-ch=sis]{background:#CCFBF1;color:#0D9488} .chat.love{border-top:4px solid #DB2777;background:#fff9fc} .tabs button.sel[data-ch=love]{background:#FCE7F3;color:#DB2777}
   .xrole{display:flex;gap:10px;align-items:flex-start;padding:9px 11px;border:1px solid #e5e7eb;border-radius:12px;margin-top:8px;background:#fff;cursor:pointer;text-align:left;width:100%;font:inherit;color:inherit}
   .xrole.on{border-color:#16a34a;background:#f0fdf4} .xrole.off{opacity:.55} .xrole .ic{font-size:24px;line-height:1.1} .xrole .tt{flex:1} .xrole .tt small{display:block;color:var(--mute);font-size:12px;margin-top:2px} .xrole .st{font-weight:700;font-size:12px;white-space:nowrap}
@@ -210,7 +211,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, EXTRA_ORDER, EXTRA_ROLES, rolePlan, extraPicks, startBlock, inPack, coupleOf, wwAllowed, needTwo, LOVE_CHAT, MIN, MAX, CAP_OPTIONS, capOf, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261128c';
+import { ROLE_NAME, EXTRA_ORDER, EXTRA_ROLES, rolePlan, extraPicks, startBlock, inPack, coupleOf, wwAllowed, needTwo, LOVE_CHAT, MIN, MAX, CAP_OPTIONS, capOf, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261128d';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -459,7 +460,8 @@ async function tickHost() {
 }
 setInterval(() => { tickHost(); updateClock(); }, 1000);
 function updateClock() {
-  const cd = document.getElementById('cd');
+  const cd = document.getElementById('cd'), tl = S && S.deadline ? Math.max(0, Math.ceil((S.deadline - tnow()) / 1000)) : 0;
+  document.querySelectorAll('.tcd').forEach(e => { e.textContent = 'còn ' + tl + ' giây'; });
   if (cd) cd.textContent = S && S.deadline ? '⏱ ' + Math.max(0, Math.ceil((S.deadline - tnow()) / 1000)) + 's' : '';
   const fh = document.getElementById('fillhint');
   if (fh) {
@@ -609,7 +611,7 @@ function helpHTML() {
     <li>🌙 <b>Ban đêm (mặc định ${DUR.night} giây, chủ phòng chỉnh được 20–90 giây)</b>: Sói, Tiên tri, Bảo vệ, Phù thủy chọn mục tiêu. Dân làng chờ trời sáng.</li>
     <li>🌅 <b>Mở đầu ván</b>: ván bắt đầu bằng một buổi sáng để mọi người làm quen và trò chuyện (chưa ai chết, chưa bỏ phiếu), hết giờ hoặc mọi người sẵn sàng thì trời tối, Đêm 1 bắt đầu.</li>
     <li>☀️ <b>Ban ngày (mặc định ${DUR.day} giây, chủ phòng chỉnh được 1–10 phút)</b>: biết ai chết, thảo luận trong chat để tìm Sói. Muốn sang bước tiếp thì bấm <b>Sẵn sàng bỏ phiếu</b>.</li>
-    <li>🗳️ <b>Bỏ phiếu (${DUR.vote} giây)</b>: mỗi người chọn một người để treo cổ. Người nhiều phiếu nhất chết và lộ vai (trừ khi chủ phòng tắt “Lộ vai khi chết” ở phòng chờ). Hòa phiếu thì <b>Trưởng làng chọn một trong những người hòa</b> để treo cổ (${DUR.tie} giây; Trưởng làng đã chết hoặc không chọn kịp thì không ai chết).</li>
+    <li>🗳️ <b>Bỏ phiếu (${DUR.vote} giây)</b>: mỗi người chọn một người để treo cổ. Người nhiều phiếu nhất chết và lộ vai (trừ khi chủ phòng tắt “Lộ vai khi chết” ở phòng chờ). Hòa phiếu thì <b>Trưởng làng chọn một trong những người hòa</b> để treo cổ (${DUR.tie} giây; Trưởng làng đã chết hoặc không quyết kịp thì mọi người hòa phiếu đều sống).</li>
     <li>Lặp lại ban đêm cho đến khi một phe thắng.</li>
   </ol>
   <h3>💬 Chat</h3>
@@ -742,7 +744,7 @@ function todo() {   // một câu nói rõ "bây giờ bạn cần làm gì"
   }
   const p = S.players || {}, roles = S.roles || {}, my = roles[me.pid], alive = p[me.pid] && p[me.pid].alive;
   if (S.phase === 'end') return ['🏁 Hết ván! Bấm “Chơi ván mới” để chơi tiếp.', false];
-  if (S.phase === 'tie') return S.tie && S.tie.chief === me.pid ? ['👑 Hòa phiếu! Bạn là Trưởng làng: chọn một người trong số người hòa để treo cổ (hết giờ thì không ai bị treo).', false] : ['👑 Hòa phiếu! Trưởng làng đang chọn một người để treo cổ… Bạn có thể nhắn ở chat làng để thuyết phục.', true];
+  if (S.phase === 'tie') return S.tie && S.tie.chief === me.pid ? [`👑 Hòa phiếu! Bạn là Trưởng làng: chọn một người trong số người hòa để treo cổ. Bạn có ${DUR.tie} giây, không quyết kịp thì mọi người hòa phiếu đều sống.`, false] : ['🤔 Hòa phiếu! Trưởng làng đang suy nghĩ để quyết định treo ai… Bạn có thể nhắn ở chat làng để thuyết phục.', true];
   if (S.phase === 'hunter') return S.hunter && S.hunter.id === me.pid ? ['🏹 Bạn là Thợ săn! Chọn một người để bắn trước khi gục (hết giờ thì không bắn).', false] : ['🏹 Thợ săn đang chọn người để bắn… chờ một chút.', true];
   if (!alive) return ['💀 Bạn đã chết. Cứ xem tiếp, và đừng tiết lộ vai của ai.', true];
   if (S.phase === 'night') {
@@ -795,7 +797,7 @@ function specHTML() {
   } else if (S.phase === 'vote') {
     const v = Object.keys(S.votes || {});
     out += `<div class="card"><div class="sec">Bỏ phiếu</div>${v.length}/${alive.length} người đã bỏ phiếu</div>`;
-  } else if (S.phase === 'tie') out += `<div class="card"><div class="sec">⚖️ Hòa phiếu</div>Trưởng làng đang chọn một người để treo cổ.</div>`;
+  } else if (S.phase === 'tie') out += `<div class="card tiecard"><div class="tt">🤔 Trưởng làng đang suy nghĩ… <span class="tcd"></span></div><div>Hòa phiếu, Trưởng làng đang quyết định treo ai.</div></div>`;
   out += `<div class="card"><div class="sec">Người chơi<span class="r">vai người sống được giữ kín</span></div>${playersGrid(S.phase === 'end', S.phase === 'lobby')}</div>`;
   if (S.phase === 'lobby') out += lastGameHTML();
   out += `<div class="card"><div class="sec">👀 Khán đài (${specs.length} khán giả)</div>${specs.map(x => esc(x.name)).join(', ')}</div>`;
@@ -869,7 +871,8 @@ function gameHTML() {
   const alive = Object.keys(p).filter(id => p[id].alive);
   const PH = { tie: ['⚖️ Hòa phiếu', 'red'], hunter: ['🏹 Thợ săn bắn', 'red'], night: ['🌙 Ban đêm', 'mute'], day: ['☀️ Ban ngày', 'amber'], vote: ['🗳️ Bỏ phiếu', 'red'], end: ['🏁 Kết thúc', 'green'] }[S.phase];
   let out = `<div class="status"><span class="chip ${PH[1]}">${PH[0]}</span><span class="chip mute">${S.round === 0 ? 'Mở đầu ván' : 'Đêm thứ ' + S.round}</span><span class="chip" id="cd"></span><span class="chip mute">${alive.length}/${Object.keys(p).length} còn sống</span>${S.hideRoles ? '<span class="chip mute">🎭 Ẩn vai khi chết</span>' : ''}${onlineSpecs(S).length ? `<span class="chip mute">👀 ${onlineSpecs(S).length} khán giả</span>` : ''}</div>`;
-  out += rolesSummary() + todoHTML() + '\u0001ACT\u0001' + recapHTML();   // \u0001ACT\u0001: chỗ để phần chọn hành động (cắn/soi/bảo vệ/bỏ phiếu/bắn) được đôn lên ngay dưới hướng dẫn cho dễ bấm   // dòng "ván này có" cố định trên cùng; diễn biến (khi đã có) nằm trên thẻ vai và cập nhật ngay trong lúc chơi
+  const sumBottom = (S.round || 0) >= 3;   // qua vài lượt thì dòng "Ván này có" xuống cuối trang (nằm trong dòng chảy, không đè lên nút nào)
+  out += (sumBottom ? '' : rolesSummary()) + todoHTML() + '\u0001ACT\u0001' + recapHTML();   // \u0001ACT\u0001: chỗ để phần chọn hành động (cắn/soi/bảo vệ/bỏ phiếu/bắn) được đôn lên ngay dưới hướng dẫn cho dễ bấm   // dòng "ván này có" cố định trên cùng; diễn biến (khi đã có) nằm trên thẻ vai và cập nhật ngay trong lúc chơi
   const roleCard = !myRole ? '' : `<div class="card role ${showRole && myRole ? myRole : ''} ${!roleSeen && myRole ? 'pulse' : ''}" data-act="toggleRole">${showRole && myRole
     ? `<div class="note">Vai của bạn</div><div class="big t-${myRole}">${ROLE_NAME[myRole]}</div><div class="note">${ROLE_HINT[myRole]}</div><div class="note" style="margin-top:6px">(bấm để ẩn)</div>`
     : `<div class="note">${roleSeen ? 'Bấm để xem lại vai (đừng cho người khác thấy)' : '👆 Bấm vào đây để xem vai của bạn (đừng cho người khác thấy)'}</div><div class="big">🎴</div>`}</div>`;
@@ -901,7 +904,8 @@ function gameHTML() {
     else out += '<div class="card note">Bạn đang ngủ… Chờ trời sáng.</div>';
   } else if (S.phase === 'tie') {
     const ids = Object.values((S.tie || {}).ids || {}).filter(id => p[id] && p[id].alive), names = ids.map(id => esc(p[id].name)).join(' và ');
-    out += S.tie && S.tie.chief === me.pid ? (S.tieShot ? `<div class="card">Bạn đã chọn treo cổ <b>${esc(p[S.tieShot].name)}</b>.</div>` : picker(ids, 'tie', '⚖️ Hòa phiếu: chọn người để treo cổ')) : `<div class="card note">⚖️ Hòa phiếu giữa <b>${names}</b>. Trưởng làng đang chọn một người để treo cổ…</div>`;
+    const think = `<div class="card tiecard"><div class="tt">🤔 Trưởng làng đang suy nghĩ… <span class="tcd"></span></div><div>⚖️ Hòa phiếu giữa <b>${names}</b>. Cả làng đang đợi Trưởng làng quyết định treo ai. Không quyết kịp thì mọi người hòa phiếu đều sống.</div></div>`;
+    out += S.tie && S.tie.chief === me.pid ? (S.tieShot ? `<div class="card">Bạn đã chọn treo cổ <b>${esc(p[S.tieShot].name)}</b>.</div>` : `<div class="card tiecard"><div class="tt">👑 Đến lượt bạn quyết định! <span class="tcd"></span></div><div>Hòa phiếu giữa <b>${names}</b>. Chọn một người để treo cổ, không chọn kịp thì mọi người hòa phiếu đều sống.</div></div>` + picker(ids, 'tie', '⚖️ Hòa phiếu: chọn người để treo cổ')) : think;
   } else if (S.phase === 'hunter') {
     const h = S.hunter || {}, hn = p[h.id] ? esc(p[h.id].name) : 'Thợ săn';
     out += h.id === me.pid ? (S.hunterShot ? `<div class="card">Bạn đã chọn bắn <b>${esc(p[S.hunterShot].name)}</b>.</div>` : picker(alive.filter(id => id !== me.pid), 'hunter', '🏹 Chọn người để bắn')) : `<div class="card note">🏹 Thợ săn <b>${hn}</b> đang chọn người để bắn…</div>`;
@@ -923,7 +927,7 @@ function gameHTML() {
   out += `<div class="card"><div class="sec">Người chơi</div>${playersGrid(S.phase === 'end', false)}</div>`;
   if (S.log) out += roleCard;
   const chatH = chatHTML();
-  return `<div class="cols ${chatH.includes('chatpair') ? 'chat2' : ''}"><div class="stack">${out}</div><div class="stack">${S.host === me.pid ? specBtn() : ''}${S.phase === 'end' ? '' : '<button class="ghost" data-act="leave">Thoát khỏi phòng</button>'}${chatH}</div></div>`;
+  return `<div class="cols ${chatH.includes('chatpair') ? 'chat2' : ''}"><div class="stack">${out}</div><div class="stack">${S.host === me.pid ? specBtn() : ''}${S.phase === 'end' ? '' : '<button class="ghost" data-act="leave">Thoát khỏi phòng</button>'}${chatH}</div></div>${sumBottom ? `<div class="stack" style="margin-top:12px">${rolesSummary()}</div>` : ''}`;
 }
 
 /* ============ Chat ============ */
@@ -1835,7 +1839,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261128c';
+const APP_V = '20261128d';
 const UPD_NOTE = '<div id="updnote" class="updnote">🔔 Có bản cập nhật mới. Bấm F5 (hoặc Ctrl + Shift + R) để tải lại trang nhé.</div>';
 async function checkNewVersion() {
   try {

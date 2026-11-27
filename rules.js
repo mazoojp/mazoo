@@ -47,7 +47,7 @@ export const wwAllowed = room => {   // đêm nay Sói trắng có quyền cắn
 export const KNIGHT_DELAY = 2;   // số đêm từ lúc Hiệp sĩ bị cắn chết đến lúc Sói trúng kiếm độc chết
 export const LOVE_CHAT = 15;   // giây cặp đôi được nói chuyện riêng sau khi Cupid ghép (đêm 1)
 export const WITCH_EXTRA = 10;   // giây cộng thêm cho Phù thủy khi Sói đã chốt mục tiêu
-export const DUR = { night: 30, day: 120, vote: 60, hunter: 20, tie: 20 };   // giây (mặc định)
+export const DUR = { night: 30, day: 120, vote: 60, hunter: 20, tie: 10 };   // giây (mặc định)
 export const DAY_OPTIONS = [60, 120, 180, 300, 600];   // thời gian thảo luận ban ngày mà chủ phòng được chọn (giây), lưu ở room.dayTime
 export const NIGHT_OPTIONS = [20, 30, 45, 60, 90];   // thời gian ban đêm (cả Sói chọn mục tiêu) mà chủ phòng được chọn, lưu ở room.nightTime
 export const durOf = (room, ph) => ph === 'day' && DAY_OPTIONS.includes(room && room.dayTime) ? room.dayTime : ph === 'night' && NIGHT_OPTIONS.includes(room && room.nightTime) ? room.nightTime : DUR[ph];
@@ -372,10 +372,10 @@ function votePlan(room, now) {
     const ids = Object.values(room.tie.ids || {}).filter(id => players[id] && players[id].alive), pk = ids.includes(room.tieShot) ? room.tieShot : null;
     u.tie = null; u.tieShot = null;
     if (pk) { dead = pk; announce = `Hòa phiếu, Trưởng làng chọn treo cổ ${players[dead].name}${room.hideRoles ? '.' : ` (${ROLE_NAME[roles[dead]]}).`}`; }
-    else announce = 'Hòa phiếu và Trưởng làng không chọn kịp, hôm nay không ai bị treo cổ.';
+    else announce = 'Hòa phiếu và Trưởng làng không quyết kịp, mọi người hòa phiếu đều sống, hôm nay không ai bị treo cổ.';
   } else if (t.top.length > 1 && t.max > 0 && (al.some(id => roles[id] === 'chief') || (room.hideRoles && Object.values(roles).includes('chief')))) {   // hòa phiếu: Trưởng làng (còn sống) chọn một trong những người hòa; chế độ căng thì luôn chờ đủ giờ để không lộ Trưởng làng còn sống hay không
     const cid = al.find(id => roles[id] === 'chief') || null;
-    return { u: { tie: { ids: t.top, chief: cid }, tieShot: null, deadline: now + DUR.tie * 1000, announce: `Hòa phiếu giữa ${t.top.map(id => players[id].name).join(' và ')}. Trưởng làng chọn một người để treo cổ (${DUR.tie} giây, không chọn thì không ai bị treo).` }, g: null };
+    return { u: { tie: { ids: t.top, chief: cid }, tieShot: null, deadline: now + DUR.tie * 1000, announce: `Hòa phiếu giữa ${t.top.map(id => players[id].name).join(' và ')}. Trưởng làng đang suy nghĩ để quyết định treo ai (${DUR.tie} giây, không quyết kịp thì mọi người hòa phiếu đều sống).` }, g: null };
   } else if (t.top.length === 1 && t.max > 0) { dead = t.top[0]; announce = `Làng treo cổ ${players[dead].name}${room.hideRoles ? '.' : ` (${ROLE_NAME[roles[dead]]}).`}`;   /* hideRoles: chế độ không lộ vai khi chết */ }
   else announce = 'Phiếu hòa hoặc không ai bỏ phiếu, hôm nay không ai bị treo cổ.';
   const wc = withCouple(room, dead ? [dead] : []), deaths = wc.deaths;   // người yêu của người bị treo chết theo
@@ -437,7 +437,7 @@ export function planBots(room, now) {
   const al = aliveIds(room), roles = room.roles, r = room.round, ph = room.phase;
   if (room.tie) {   // Trưởng làng máy chọn người treo cổ trong số người hòa phiếu (Sói thì tránh đồng bọn)
     const tt = room.tie, cp = tt.chief && room.players[tt.chief], elt = now - (room.deadline - DUR.tie * 1000);
-    if (cp && cp.bot && !room.tieShot && elt >= 2000 + hash(tt.chief + 't' + r) * 6000) {
+    if (cp && cp.bot && !room.tieShot && elt >= 1500 + hash(tt.chief + 't' + r) * 4000) {
       let c = Object.values(tt.ids || {}).filter(id => room.players[id] && room.players[id].alive);
       if (inPack(room, tt.chief) && c.some(id => !inPack(room, id))) c = c.filter(id => !inPack(room, id));
       if (c.length) return { u: { tieShot: hpick(c, tt.chief + 'ts' + r) } };
