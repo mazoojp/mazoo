@@ -211,7 +211,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, EXTRA_ORDER, EXTRA_ROLES, rolePlan, extraPicks, startBlock, inPack, coupleOf, wwAllowed, needTwo, LOVE_CHAT, MIN, MAX, CAP_OPTIONS, capOf, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261128d';
+import { ROLE_NAME, EXTRA_ORDER, EXTRA_ROLES, rolePlan, extraPicks, startBlock, inPack, coupleOf, wwAllowed, needTwo, LOVE_CHAT, KNIGHT_DELAY, MIN, MAX, CAP_OPTIONS, capOf, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261128e';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -813,21 +813,23 @@ function rolesSummary() {   // ván này có những vai gì (số lượng ban 
 }
 function wolfMatesHTML() {
   const roles = S.roles || {}, p = S.players || {};
-  if (me.spec) return '';
-  let out = '';
+  if (me.spec) return [];
+  const L = [], add = (born, html) => L.push([born, html]);   // mỗi thẻ báo kèm đêm sinh ra, để thẻ cũ lùi dần xuống cuối trang
   if (inPack(S, me.pid)) {
     const mates = Object.keys(roles).filter(id => inPack(S, id) && id !== me.pid && p[id]);
-    out += `<div class="card" style="border-left:4px solid #DC2626;padding:10px 16px">🐺 <b>Đồng bọn Sói của bạn:</b> ${mates.length ? mates.map(id => esc(p[id].name) + (roles[id] === 'wolf' ? '' : ` (${ROLE_NAME[roles[id]]})`) + (p[id].alive ? '' : ' (đã chết)')).join(', ') : 'không có (bạn là Sói duy nhất)'}</div>`;
+    const tr = (S.turned || {})[me.pid];
+    add(roles[me.pid] === 'halfwolf' && typeof tr === 'number' ? tr : 0, `<div class="card" style="border-left:4px solid #DC2626;padding:10px 16px">🐺 <b>Đồng bọn Sói của bạn:</b> ${mates.length ? mates.map(id => esc(p[id].name) + (roles[id] === 'wolf' ? '' : ` (${ROLE_NAME[roles[id]]})`) + (p[id].alive ? '' : ' (đã chết)')).join(', ') : 'không có (bạn là Sói duy nhất)'}</div>`);
     const km = S.knightMark, kl = S.knightLast;   // báo riêng cho bầy Sói: vì sao một Sói sắp chết / vừa chết
-    if (km && p[km.id]) out += `<div class="card" style="border-left:4px solid #0891b2;padding:10px 16px">⚔️ <b>Hiệp sĩ đã bị Sói cắn chết</b> nên kiếm độc của anh ta trúng một Sói: <b>${esc(p[km.id].name)}${km.id === me.pid ? ' (chính là bạn)' : ''}</b> sẽ chết vào <b>đêm ${km.at}</b>.</div>`;
-    if (kl && p[kl.id] && kl.r >= S.round - 1) out += `<div class="card" style="border-left:4px solid #0891b2;padding:10px 16px">⚔️ <b>${esc(p[kl.id].name)}</b> vừa chết vì <b>kiếm độc của Hiệp sĩ</b> (Hiệp sĩ bị Sói cắn chết ở hai đêm trước).</div>`;
-    if (roles[me.pid] === 'halfwolf') out += `<div class="card" style="border-left:4px solid #9333ea;padding:10px 16px">🌗 Bạn đã bị Sói cắn và <b>hóa thành Sói</b>! Từ giờ bạn thuộc phe Sói, cùng cắn người mỗi đêm.</div>`;
+    if (km && p[km.id]) add(km.at - KNIGHT_DELAY, `<div class="card" style="border-left:4px solid #0891b2;padding:10px 16px">⚔️ <b>Hiệp sĩ đã bị Sói cắn chết</b> nên kiếm độc của anh ta trúng một Sói: <b>${esc(p[km.id].name)}${km.id === me.pid ? ' (chính là bạn)' : ''}</b> sẽ chết vào <b>đêm ${km.at}</b>.</div>`);
+    if (kl && p[kl.id] && kl.r >= S.round - 1) add(kl.r, `<div class="card" style="border-left:4px solid #0891b2;padding:10px 16px">⚔️ <b>${esc(p[kl.id].name)}</b> vừa chết vì <b>kiếm độc của Hiệp sĩ</b> (Hiệp sĩ bị Sói cắn chết ở hai đêm trước).</div>`);
+    if (roles[me.pid] === 'halfwolf') add(typeof tr === 'number' ? tr : 0, `<div class="card" style="border-left:4px solid #9333ea;padding:10px 16px">🌗 Bạn đã bị Sói cắn và <b>hóa thành Sói</b>! Từ giờ bạn thuộc phe Sói, cùng cắn người mỗi đêm.</div>`);
   }
-  if (roles[me.pid] === 'sister') { const o = Object.keys(roles).find(id => roles[id] === 'sister' && id !== me.pid && p[id]); if (o) out += `<div class="card" style="border-left:4px solid #0d9488;padding:10px 16px">👭 <b>Chị em của bạn:</b> ${esc(p[o].name)}${p[o].alive ? '' : ' (đã chết)'}. Hai bạn là Dân và tin được nhau. Ban đêm hai bạn nhắn riêng được ở khung <b>Chat chị em</b>.</div>`; }
+  if (roles[me.pid] === 'sister') { const o = Object.keys(roles).find(id => roles[id] === 'sister' && id !== me.pid && p[id]); if (o) add(0, `<div class="card" style="border-left:4px solid #0d9488;padding:10px 16px">👭 <b>Chị em của bạn:</b> ${esc(p[o].name)}${p[o].alive ? '' : ' (đã chết)'}. Hai bạn là Dân và tin được nhau. Ban đêm hai bạn nhắn riêng được ở khung <b>Chat chị em</b>.</div>`); }
   const lv = loveOf(me.pid);
-  if (lv && p[lv]) { const mixed = inPack(S, me.pid) !== inPack(S, lv); out += `<div class="card" style="border-left:4px solid #DB2777;padding:10px 16px">💘 <b>Cặp đôi:</b> bạn và <b>${esc(p[lv].name)}</b> (${ROLE_NAME[roles[lv]]}). Một người chết thì người kia chết theo.${mixed ? ' Hai bạn khác phe nên là <b>phe thứ ba</b>: thắng khi chỉ còn hai bạn sống sót.' : ''}${p[lv].alive ? '' : ' (người yêu đã chết)'}</div>`; }
-  return out;
+  if (lv && p[lv]) { const mixed = inPack(S, me.pid) !== inPack(S, lv); add(1, `<div class="card" style="border-left:4px solid #DB2777;padding:10px 16px">💘 <b>Cặp đôi:</b> bạn và <b>${esc(p[lv].name)}</b> (${ROLE_NAME[roles[lv]]}). Một người chết thì người kia chết theo.${mixed ? ' Hai bạn khác phe nên là <b>phe thứ ba</b>: thắng khi chỉ còn hai bạn sống sót.' : ''}${p[lv].alive ? '' : ' (người yêu đã chết)'}</div>`); }
+  return L;
 }
+const INFO_STAY = 3;   // số đêm một thẻ thông tin còn ở trên cùng trước khi lùi xuống cuối
 const ROLE_ORDER = ['wolf', 'pup', 'whitewolf', 'seer', 'guard', 'chief', 'witch', 'hunter', 'cupid', 'knight', 'sister', 'halfwolf', 'vill'], ROLE_ICON = { wolf: '🐺', pup: EXTRA_ROLES.pup.icon, whitewolf: EXTRA_ROLES.whitewolf.icon, seer: '🔮', guard: '🛡️', chief: '👑', witch: '🧙', hunter: '🏹', cupid: EXTRA_ROLES.cupid.icon, knight: EXTRA_ROLES.knight.icon, sister: EXTRA_ROLES.sister.icon, halfwolf: EXTRA_ROLES.halfwolf.icon, vill: '🧑‍🌾' };
 function revealHTML(list) {   // "ai là ai": gom theo vai, Sói đứng đầu; list = [{n, r, a}]
   const rows = ROLE_ORDER.map(r => ({ r, xs: list.filter(x => x.r === r) })).filter(g => g.xs.length);
@@ -876,8 +878,9 @@ function gameHTML() {
   const roleCard = !myRole ? '' : `<div class="card role ${showRole && myRole ? myRole : ''} ${!roleSeen && myRole ? 'pulse' : ''}" data-act="toggleRole">${showRole && myRole
     ? `<div class="note">Vai của bạn</div><div class="big t-${myRole}">${ROLE_NAME[myRole]}</div><div class="note">${ROLE_HINT[myRole]}</div><div class="note" style="margin-top:6px">(bấm để ẩn)</div>`
     : `<div class="note">${roleSeen ? 'Bấm để xem lại vai (đừng cho người khác thấy)' : '👆 Bấm vào đây để xem vai của bạn (đừng cho người khác thấy)'}</div><div class="big">🎴</div>`}</div>`;
-  if (!S.log) out += roleCard;   // đầu ván (chưa có diễn biến): thẻ vai nằm trên; sau đó xuống dưới cùng
-  out += wolfMatesHTML();
+  // Thẻ thông tin của mình (thẻ vai, đồng bọn, chị em, cặp đôi, báo Hiệp sĩ…): mới sinh ra thì nằm trên cho dễ thấy, qua INFO_STAY đêm thì lùi dần xuống cuối trang
+  const info = [[0, roleCard], ...wolfMatesHTML()], isFresh = c => (S.round || 0) - c[0] < INFO_STAY;
+  out += info.filter(isFresh).map(c => c[1]).join('');
   if (S.announce) out += `<div class="card ann">${esc(S.announce).replace(/\n/g, '<br>')}</div>`;
   if (myRole === 'seer' && S.seerLog && S.phase !== 'night') { const ks = Object.keys(S.seerLog).filter(k => +k === S.round); if (ks.length) out += `<div class="card"><div class="sec">🔮 Kết quả soi đêm vừa rồi</div>${ks.map(k => `<div>${esc(S.seerLog[k])}</div>`).join('')}<p class="note" style="margin-top:6px">Kết quả chỉ hiện đến hết ngày hôm nay, hãy nhớ kỹ.</p></div>`; }   // không giữ lịch sử: sang đêm mới là mất
 
@@ -925,7 +928,7 @@ function gameHTML() {
   }
   if (['night', 'vote', 'tie', 'hunter'].includes(S.phase)) { const blk = out.slice(actMark); out = out.slice(0, actMark).replace('\u0001ACT\u0001', blk); } else out = out.replace('\u0001ACT\u0001', '');   // phần chọn hành động nằm trên cùng
   out += `<div class="card"><div class="sec">Người chơi</div>${playersGrid(S.phase === 'end', false)}</div>`;
-  if (S.log) out += roleCard;
+  out += info.filter(c => !isFresh(c)).map(c => c[1]).join('');   // thẻ đã cũ: ở cuối, nằm trong dòng chảy nên không che nút nào
   const chatH = chatHTML();
   return `<div class="cols ${chatH.includes('chatpair') ? 'chat2' : ''}"><div class="stack">${out}</div><div class="stack">${S.host === me.pid ? specBtn() : ''}${S.phase === 'end' ? '' : '<button class="ghost" data-act="leave">Thoát khỏi phòng</button>'}${chatH}</div></div>${sumBottom ? `<div class="stack" style="margin-top:12px">${rolesSummary()}</div>` : ''}`;
 }
@@ -1839,7 +1842,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261128d';
+const APP_V = '20261128e';
 const UPD_NOTE = '<div id="updnote" class="updnote">🔔 Có bản cập nhật mới. Bấm F5 (hoặc Ctrl + Shift + R) để tải lại trang nhé.</div>';
 async function checkNewVersion() {
   try {

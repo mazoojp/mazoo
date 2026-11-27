@@ -312,7 +312,7 @@ function nightPlan(room, now) {
     const g = guardPick === v, h = healOk && healTo === v;
     let t;
     if (g || h) { savedBy[v] = g && h ? 'Bảo vệ và Phù thủy' : h ? 'Phù thủy' : 'Bảo vệ'; t = `Có người bị Sói cắn nhưng được ${savedBy[v]} cứu`; }
-    else if (roles[v] === 'halfwolf' && !turned[v]) { turned[v] = true; u['turned/' + v] = true; t = 'Có người bị Sói cắn nhưng không chết'; }   // Nửa người nửa sói bị cắn: hóa Sói, không chết
+    else if (roles[v] === 'halfwolf' && !turned[v]) { turned[v] = true; u['turned/' + v] = room.round;   /* lưu số đêm bị hóa Sói (luôn > 0, các chỗ khác chỉ xét có/không); giao diện dùng để biết thẻ báo còn mới */ t = 'Có người bị Sói cắn nhưng không chết'; }   // Nửa người nửa sói bị cắn: hóa Sói, không chết
     else { bitDead.push(v); t = `${nm(v)} bị Sói cắn chết`; }
     texts.push(i ? t.replace(/^Có/, 'có') : t);
   });
