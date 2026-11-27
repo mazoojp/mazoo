@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Sách và đồ học tiếng Nhật</title>
+<title>Đồ gia dụng Nhật Bản</title>
 <style>
   :root{--bg:#F0F2F5;--card:#fff;--text:#1C2024;--mute:#60646C;--line:#DEE2E6;--blue:#1371E2;--amber:#FFF4D6;--amber-t:#8A5A00}
   *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
@@ -24,33 +24,35 @@
 <body>
 <div class="wrap">
   <a class="back" href="./">← Về trang Ma sói</a>
-  <h1>📚 Sách và đồ học tiếng Nhật</h1>
-  <p class="note">Gợi ý cho bạn nào đang luyện thi JLPT hoặc mới bắt đầu học. Bấm vào sẽ mở trang tìm kiếm trên Amazon Nhật, bạn tự xem giá, đánh giá và chọn bản phù hợp.</p>
+  <h1>🏠 Đồ gia dụng Nhật Bản</h1>
+  <p class="note">Gợi ý đồ gia dụng thường dùng ở Nhật cho bạn đang sống ở đây. Bấm vào sẽ mở trang tìm kiếm trên Amazon Nhật, bạn tự xem giá, đánh giá và chọn mẫu phù hợp.</p>
   <p class="note" id="disc-top">Trang này có liên kết tiếp thị: nếu bạn mua qua liên kết, người làm trang có thể nhận một khoản hoa hồng nhỏ, giá bạn trả không đổi. / Amazonのアソシエイトとして、適格販売により収入を得ています。</p>
   <div class="warn" id="owner" hidden>Chủ trang: chưa điền mã Amazon Associates (biến <code>AMAZON_TAG</code> đầu phần script), nên các liên kết bên dưới chưa tính hoa hồng.</div>
   <div id="list"></div>
-  <p class="disc">Amazon và logo Amazon là thương hiệu của Amazon.com, Inc. hoặc các công ty liên kết. Giá, tình trạng còn hàng và khả năng giao đến Việt Nam do Amazon quyết định và có thể thay đổi, hãy kiểm tra trên trang Amazon trước khi mua.</p>
+  <p class="disc">Đồ điện ở Nhật dùng điện 100V và phích cắm kiểu Nhật. Nếu định mang về Việt Nam (220V) thì cần kiểm tra điện áp, nếu không có thể hỏng hoặc không an toàn. Amazon và logo Amazon là thương hiệu của Amazon.com, Inc. hoặc các công ty liên kết. Giá, tình trạng còn hàng và khả năng giao đến Việt Nam do Amazon quyết định và có thể thay đổi, hãy kiểm tra trên trang Amazon trước khi mua.</p>
 </div>
 <script>
 // Điền mã Amazon Associates của bạn (ví dụ 'ten-22') để link tính hoa hồng. Để trống thì link vẫn mở được nhưng không có hoa hồng.
 const AMAZON_TAG = '';
 const AMAZON_HOST = 'https://www.amazon.co.jp';
 const GROUPS = [
-  { t: '🌱 Mới bắt đầu (N5–N4)', items: [
-    ['Genki 初級日本語 げんき', 'Giáo trình sơ cấp nổi tiếng, có bản tiếng Anh, bài tập đi kèm.', 'げんき 初級日本語 教科書'],
-    ['Minna no Nihongo みんなの日本語 初級', 'Giáo trình sơ cấp phổ biến ở Việt Nam, học theo bài.', 'みんなの日本語 初級 本冊'],
-    ['Kanji Look and Learn', 'Học 512 chữ Hán bằng hình minh hoạ, dễ nhớ.', 'Kanji Look and Learn 512 Kanji'],
+  { t: '🍚 Nhà bếp', items: [
+    ['Nồi cơm điện', 'Nồi cơm điện Nhật như Zojirushi, Tiger nấu cơm dẻo, giữ ấm tốt.', '炊飯器 象印'],
+    ['Bình đun nước điện', 'Ấm đun nước điện, bình giữ nước nóng dùng pha trà, mì, cà phê.', '電気ケトル'],
+    ['Nồi áp suất', 'Hầm nấu nhanh, tiết kiệm gas và điện.', '電気圧力鍋'],
+    ['Bếp nướng điện / lẩu (hot plate)', 'Nướng, lẩu và nấu nhiều món trên một chiếc bếp, hợp ăn cùng nhóm bạn.', 'ホットプレート'],
+    ['Dao bếp Nhật (santoku)', 'Dao đa năng thông dụng trong bếp nhà Nhật.', '三徳包丁'],
   ]},
-  { t: '📈 Luyện thi JLPT (N3–N1)', items: [
-    ['日本語総まとめ N3', 'Bộ tổng ôn theo từng kỹ năng: ngữ pháp, từ vựng, Hán tự, đọc, nghe.', '日本語総まとめ N3'],
-    ['新完全マスター 文法 N2', 'Bộ Shin Kanzen Master, nổi tiếng với phần ngữ pháp N2.', '新完全マスター 文法 N2'],
-    ['耳から覚える語彙トレーニング', 'Học từ vựng bằng nghe, hợp để luyện nghe và nhớ lâu.', '耳から覚える語彙トレーニング'],
-    ['JLPT 過去問題集', 'Đề thi thật các năm, nên làm thử trước kỳ thi.', 'JLPT 問題集 過去問'],
+  { t: '🧹 Dọn dẹp và không khí', items: [
+    ['Máy hút bụi không dây', 'Nhẹ, gọn, hợp phòng trọ và căn hộ nhỏ.', 'コードレス掃除機'],
+    ['Robot hút bụi', 'Tự dọn sàn khi bạn đi làm.', 'ロボット掃除機'],
+    ['Máy lọc không khí', 'Lọc bụi mịn và phấn hoa, hữu ích vào mùa dị ứng.', '空気清浄機'],
+    ['Máy hút ẩm', 'Phơi đồ trong nhà vào mùa mưa, giảm ẩm mốc.', '衣類乾燥除湿機'],
   ]},
-  { t: '🛠️ Dụng cụ học', items: [
-    ['Từ điển điện tử', 'Từ điển điện tử đa ngôn ngữ, tra nhanh khi đọc sách.', '電子辞書 外国語 カシオ'],
-    ['Sổ tay ghi từ vựng', 'Sổ ghi từ, Hán tự và ngữ pháp hàng ngày.', '単語帳 ノート 勉強'],
-    ['Thẻ học từ (flashcard)', 'Thẻ ghi từ vựng, ôn bất cứ lúc nào.', '単語カード リング'],
+  { t: '❄️ Chống lạnh và chống nóng', items: [
+    ['Máy sưởi quạt gốm', 'Sưởi nhanh, gọn, hợp phòng nhỏ mùa đông.', 'セラミックファンヒーター'],
+    ['Chăn điện', 'Giữ ấm khi ngủ, tiết kiệm hơn bật máy sưởi cả đêm.', '電気毛布'],
+    ['Bình giữ nhiệt (thermos)', 'Giữ nóng hoặc lạnh nhiều giờ, mang đi làm đi học.', 'サーモス 水筒'],
   ]},
 ];
 const link = q => AMAZON_HOST + '/s?k=' + encodeURIComponent(q) + (AMAZON_TAG ? '&tag=' + encodeURIComponent(AMAZON_TAG) : '');
