@@ -7,7 +7,7 @@ export const ROLE_NAME = { wolf: 'Sói', seer: 'Tiên tri', guard: 'Bảo vệ',
 // Vai thêm (chủ phòng bật ở phòng chờ, mặc định tắt hết). min = số người tối thiểu; take = số chỗ Dân bị thay; wolves = số Sói tối thiểu của ván (vai này thay một Sói).
 export const EXTRA_ORDER = ['sister', 'halfwolf', 'cupid', 'knight', 'pup', 'whitewolf'];
 export const EXTRA_ROLES = {
-  sister: { min: 9, take: 2, icon: '👭', desc: 'Hai Dân biết rõ nhau là chị em, không có khả năng gì khác.' },
+  sister: { min: 9, take: 2, icon: '👭', desc: 'Hai Dân biết rõ nhau là chị em, ban đêm nhắn riêng được với nhau, không có khả năng gì khác.' },
   halfwolf: { min: 8, take: 1, icon: '🌗', desc: 'Ban đầu là Dân. Bị Sói cắn thì không chết mà hóa thành Sói.' },
   cupid: { min: 9, take: 1, icon: '💘', desc: 'Đêm 1 ghép hai người thành cặp đôi, một người chết thì người kia chết theo. Ghép Dân với Sói thì hai người thành phe thứ ba.' },
   knight: { min: 10, take: 1, icon: '⚔️', desc: 'Bị Sói cắn chết thì một con Sói trong bầy (đã bỏ phiếu cắn mình) sẽ chết sau 2 đêm. Cả bầy Sói được báo rõ vì sao Sói đó chết.' },
