@@ -142,7 +142,7 @@
   .tabs button{min-height:30px;height:30px;padding:0 12px;border-radius:8px;font-size:13px;background:#f3f4f6;color:var(--mute)}
   .tabs button.sel{background:var(--pri-soft);color:var(--pri-text)} .tabs button.sel[data-ch=wolf]{background:#FDECEC;color:#DC2626} .tabs button.sel[data-ch=dead]{background:#EEF0F3;color:#6B7280}
   /* khung chat không cuộn: tin mới nằm dưới cùng, tin cũ vượt quá khung thì bị cắt bỏ, chỉ còn tin mới */
-  .chatlist,#gchatlist,#cchatlist{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;background:#f9f9fb;border-radius:12px;padding:10px;margin-bottom:10px} .chatlist>*,#gchatlist>*,#cchatlist>*{flex:none}
+  .chatlist,#gchatlist,#cchatlist{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;background:#f9f9fb;border-radius:12px;padding:10px;margin-bottom:10px;scrollbar-width:thin;-webkit-overflow-scrolling:touch} .chatlist>*,#gchatlist>*,#cchatlist>*{flex:none} .chatlist>:first-child,#gchatlist>:first-child,#cchatlist>:first-child{margin-top:auto}   /* tin ít thì dính đáy khung; tin nhiều thì cuộn lên xem lại được */
   .msg{margin:5px 0;overflow-wrap:anywhere}
   .msg .chn{font-weight:700;font-size:12px;padding:1px 7px;border-radius:999px;margin-right:2px} .chn.day{background:#E8F1FD;color:#1371E2} .chn.wolf{background:#FDECEC;color:#DC2626} .chn.dead{background:#EEF0F3;color:#6B7280} .msg b{color:var(--pri)} .msg.wolfmsg b{color:var(--red)} .msg.deadmsg b{color:var(--faint)}
   .chat.sm{height:min(340px,55vh);position:static;margin-bottom:12px} .chat.sm.day{height:min(640px,90vh)} .chat.sm.dead{height:min(560px,80vh)} .chat.sm.wolf{height:min(420px,65vh)} .chat.day{border-top:4px solid var(--pri)} .chat.wolf{border-top:4px solid #DC2626;background:#fffafa} .chat.dead{border-top:4px solid #6B7280}
@@ -204,7 +204,7 @@
 <div id="app">Đang tải…</div>
 <script src="config.js"></script>
 <script type="module">
-import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261127b';
+import { ROLE_NAME, MIN, MAX, DUR, DAY_OPTIONS, NIGHT_OPTIONS, durOf, tallyScores, BEAT_AHEAD, AGAIN_LOCK, LOBBY_WAIT, BOT_NAMES, stepRoom, lobbyFillAt } from './rules.js?v=20261127c';
 
 /* ============ Backend: Firebase Realtime Database hoặc chế độ thử (localStorage) ============ */
 const clone = v => v === undefined ? null : JSON.parse(JSON.stringify(v));
@@ -1723,7 +1723,7 @@ function refreshRoomList() {
 setInterval(refreshRoomList, 2000);
 
 /* ============ Tự cập nhật: có bản mới thì tải lại (trang là một ứng dụng một trang, mở lâu sẽ giữ mã cũ và dễ gây lỗi) ============ */
-const APP_V = '20261127b';
+const APP_V = '20261127c';
 const UPD_NOTE = '<div id="updnote" class="updnote">🔔 Có bản cập nhật mới. Bấm F5 (hoặc Ctrl + Shift + R) để tải lại trang nhé.</div>';
 async function checkNewVersion() {
   try {
