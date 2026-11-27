@@ -4,6 +4,7 @@
 // "Backend" B là đối tượng có: get(path), set(path, value), update({path: value}), watch(path, cb).
 
 export const ROLE_NAME = { wolf: 'Sói', seer: 'Tiên tri', guard: 'Bảo vệ', witch: 'Phù thủy', hunter: 'Thợ săn', chief: 'Trưởng làng', vill: 'Dân làng' };
+export const WITCH_EXTRA = 10;   // giây cộng thêm cho Phù thủy khi Sói đã chốt mục tiêu
 export const DUR = { night: 30, day: 120, vote: 60, hunter: 20 };   // giây (mặc định)
 export const DAY_OPTIONS = [60, 120, 180, 300, 600];   // thời gian thảo luận ban ngày mà chủ phòng được chọn (giây), lưu ở room.dayTime
 export const NIGHT_OPTIONS = [20, 30, 45, 60, 90];   // thời gian ban đêm (cả Sói chọn mục tiêu) mà chủ phòng được chọn, lưu ở room.nightTime
@@ -152,7 +153,11 @@ export function planStep(room, now) {
     const wolvesDone = wolves.length > 0 && wolves.every(id => wv[id]);
     const all = wolvesDone && (!seer || n.seer) && (!guard || n.guard) && (!witch || n.witch);
     if (all || expired) return nightPlan(room, now);
-    if (wolvesDone && !n.target) return { u: { 'night/target': pickTarget(room) || 'none' } };   // Sói chọn xong: chốt mục tiêu để Phù thủy biết mà quyết định
+    if (wolvesDone && !n.target) {
+      const u = { 'night/target': pickTarget(room) || 'none' }, used = room.witchUsed || {};
+      if (witch && !n.witch && (!used.heal || !used.poison) && room.deadline) u.deadline = Math.max(room.deadline, now) + WITCH_EXTRA * 1000;   // Sói chốt xong: cộng thêm thời gian cho Phù thủy cân nhắc thuốc (chỉ khi còn thuốc)
+      return { u };
+    }   // Sói chọn xong: chốt mục tiêu để Phù thủy biết mà quyết định
   } else if (room.phase === 'day') {
     const al = aliveIds(room), rd = room.ready || {};
     if ((al.length && al.every(id => rd[id])) || expired) {
